@@ -60,12 +60,55 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                 _applicationModelProviders[i].OnProvidersExecuted(context);
             }
 
-            for (var i = 0; i < _conventions.Length; i++)
-            {
-                _conventions[i].Apply(context.PageApplicationModel);
-            }
+            ApplyConventions(_conventions, context.PageApplicationModel);
 
             return CompiledPageActionDescriptorBuilder.Build(context.PageApplicationModel, _globalFilters);
+        }
+
+        internal static void ApplyConventions(
+            IPageApplicationModelConvention[] globalApplicationModelConventions,
+            PageApplicationModel pageApplicationModel)
+        {
+            for (var i = 0; i < globalApplicationModelConventions.Length; i++)
+            {
+                globalApplicationModelConventions[i].Apply(pageApplicationModel);
+            }
+
+            var applicationModelConventions = pageApplicationModel.HandlerTypeAttributes.OfType<IPageApplicationModelConvention>();
+            foreach (var convention in applicationModelConventions)
+            {
+                convention.Apply(pageApplicationModel);
+            }
+
+            var handlers = pageApplicationModel.HandlerMethods.ToArray();
+            foreach (var handlerModel in handlers)
+            {
+                var handlerModelConventions = handlerModel.Attributes.OfType<IPageHandlerModelConvention>();
+                foreach (var convention in handlerModelConventions)
+                {
+                    convention.Apply(handlerModel);
+                }
+
+                var parameterModels = handlerModel.Parameters.ToArray();
+                foreach (var parameterModel in parameterModels)
+                {
+                    var parameterModelConventions = parameterModel.Attributes.OfType<IPageParameterModelConvention>();
+                    foreach (var convention in parameterModelConventions)
+                    {
+                        convention.Apply(parameterModel);
+                    }
+                }
+            }
+
+            var properties = pageApplicationModel.HandlerProperties.ToArray();
+            foreach (var propertyModel in properties)
+            {
+                var propertyModelConventions = propertyModel.Attributes.OfType<IPagePropertyModelConvention>();
+                foreach (var convention in propertyModelConventions)
+                {
+                    convention.Apply(propertyModel);
+                }
+            }
         }
     }
 }
