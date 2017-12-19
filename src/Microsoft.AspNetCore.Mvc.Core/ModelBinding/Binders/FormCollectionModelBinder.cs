@@ -7,6 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
@@ -16,6 +19,25 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class FormCollectionModelBinder : IModelBinder
     {
+        protected readonly ILogger logger;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="FormCollectionModelBinder"/>.
+        /// </summary>
+        public FormCollectionModelBinder()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="FormCollectionModelBinder"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public FormCollectionModelBinder(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger(GetType());
+        }
+
         /// <inheritdoc />
         public async Task BindModelAsync(ModelBindingContext bindingContext)
         {
@@ -23,6 +45,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             object model;
             var request = bindingContext.HttpContext.Request;
@@ -33,6 +57,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             }
             else
             {
+                logger.CannotBindToFilesCollectionDueToInvalidContentType(bindingContext);
                 model = new EmptyFormCollection();
             }
 

@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -13,6 +15,25 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class FormFileModelBinderProvider : IModelBinderProvider
     {
+        private readonly ILoggerFactory _loggerFactory;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="FormFileModelBinderProvider"/>.
+        /// </summary>
+        public FormFileModelBinderProvider()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="FormFileModelBinderProvider"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public FormFileModelBinderProvider(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory;
+        }
+
         /// <inheritdoc />
         public IModelBinder GetBinder(ModelBinderProviderContext context)
         {
@@ -27,7 +48,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 modelType == typeof(IFormFileCollection) ||
                 typeof(IEnumerable<IFormFile>).IsAssignableFrom(modelType))
             {
-                return new FormFileModelBinder();
+                return new FormFileModelBinder(_loggerFactory);
             }
 
             return null;

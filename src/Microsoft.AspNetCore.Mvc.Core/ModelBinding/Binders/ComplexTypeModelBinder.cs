@@ -7,6 +7,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Core;
+using Microsoft.AspNetCore.Mvc.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -16,7 +19,25 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class ComplexTypeModelBinder : IModelBinder
     {
         private readonly IDictionary<ModelMetadata, IModelBinder> _propertyBinders;
+        protected readonly ILogger logger;
         private Func<object> _modelCreator;
+
+        /// <summary>
+        /// Initializes an instance of <see cref="ComplexTypeModelBinder"/>.
+        /// </summary>
+        public ComplexTypeModelBinder()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes an instance of <see cref="ComplexTypeModelBinder"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public ComplexTypeModelBinder(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger(GetType());
+        }
 
         /// <summary>
         /// Creates a new <see cref="ComplexTypeModelBinder"/>.
@@ -25,6 +46,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// The <see cref="IDictionary{TKey, TValue}"/> of binders to use for binding properties.
         /// </param>
         public ComplexTypeModelBinder(IDictionary<ModelMetadata, IModelBinder> propertyBinders)
+            : this(NullLoggerFactory.Instance)
         {
             if (propertyBinders == null)
             {
@@ -34,6 +56,26 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             _propertyBinders = propertyBinders;
         }
 
+        /// <summary>
+        /// Creates a new <see cref="ComplexTypeModelBinder"/>.
+        /// </summary>
+        /// <param name="propertyBinders">
+        /// The <see cref="IDictionary{TKey, TValue}"/> of binders to use for binding properties.
+        /// </param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public ComplexTypeModelBinder(
+            IDictionary<ModelMetadata, IModelBinder> propertyBinders,
+            ILoggerFactory loggerFactory)
+        {
+            if (propertyBinders == null)
+            {
+                throw new ArgumentNullException(nameof(propertyBinders));
+            }
+
+            _propertyBinders = propertyBinders;
+            logger = loggerFactory.CreateLogger(GetType());
+        }
+
         /// <inheritdoc />
         public Task BindModelAsync(ModelBindingContext bindingContext)
         {
@@ -41,6 +83,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             if (!CanCreateModel(bindingContext))
             {
@@ -199,6 +243,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             // level object. So we return false.
             if (bindingContext.ModelMetadata.Properties.Count == 0)
             {
+                logger.NoPublicSettableProperties(bindingContext);
                 return false;
             }
 
@@ -265,6 +310,11 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 }
             }
 
+            if (hasBindableProperty && isAnyPropertyEnabledForValueProviderBasedBinding)
+            {
+                logger.CannotBindToComplexType(bindingContext);
+            }
+
             if (hasBindableProperty && !isAnyPropertyEnabledForValueProviderBasedBinding)
             {
                 // All the properties are marked with a non value provider based marker like [FromHeader] or
@@ -306,7 +356,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
             return true;
         }
-
 
         /// <summary>
         /// Creates suitable <see cref="object"/> for given <paramref name="bindingContext"/>.

@@ -4,7 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -17,6 +20,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     {
         private readonly IModelBinder _keyBinder;
         private readonly IModelBinder _valueBinder;
+        protected readonly ILogger logger;
 
         /// <summary>
         /// Creates a new <see cref="KeyValuePair{TKey, TValue}"/>.
@@ -24,6 +28,17 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// <param name="keyBinder">The <see cref="IModelBinder"/> for <typeparamref name="TKey"/>.</param>
         /// <param name="valueBinder">The <see cref="IModelBinder"/> for <typeparamref name="TValue"/>.</param>
         public KeyValuePairModelBinder(IModelBinder keyBinder, IModelBinder valueBinder)
+            : this(keyBinder, valueBinder, NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="KeyValuePair{TKey, TValue}"/>.
+        /// </summary>
+        /// <param name="keyBinder">The <see cref="IModelBinder"/> for <typeparamref name="TKey"/>.</param>
+        /// <param name="valueBinder">The <see cref="IModelBinder"/> for <typeparamref name="TValue"/>.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public KeyValuePairModelBinder(IModelBinder keyBinder, IModelBinder valueBinder, ILoggerFactory loggerFactory)
         {
             if (keyBinder == null)
             {
@@ -37,6 +52,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
             _keyBinder = keyBinder;
             _valueBinder = valueBinder;
+            logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <inheritdoc />
@@ -46,6 +62,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             var keyModelName = ModelNames.CreatePropertyModelName(bindingContext.ModelName, "Key");
             var keyResult = await TryBindStrongModel<TKey>(bindingContext, _keyBinder, "Key", keyModelName);
@@ -78,7 +96,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                     bindingContext.ModelMetadata.ModelBindingMessageProvider.MissingKeyOrValueAccessor());
                 return;
             }
-
+            
             // If we failed to find data for a top-level model, then generate a
             // default 'empty' model and return it.
             if (bindingContext.IsTopLevelObject)

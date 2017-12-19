@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -11,10 +13,17 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class EnumTypeModelBinderProvider : IModelBinderProvider
     {
         private readonly MvcOptions _options;
+        private readonly ILoggerFactory _loggerFactory;
 
         public EnumTypeModelBinderProvider(MvcOptions options)
+            : this(options, NullLoggerFactory.Instance)
+        {
+        }
+
+        public EnumTypeModelBinderProvider(MvcOptions options, ILoggerFactory loggerFactory)
         {
             _options = options;
+            _loggerFactory = loggerFactory;
         }
 
         /// <inheritdoc />
@@ -29,7 +38,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 return new EnumTypeModelBinder(
                     _options.SuppressBindingUndefinedValueToEnumType,
-                    context.Metadata.UnderlyingOrModelType);
+                    context.Metadata.UnderlyingOrModelType,
+                    _loggerFactory);
             }
 
             return null;

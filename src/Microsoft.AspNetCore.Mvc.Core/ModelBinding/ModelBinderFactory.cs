@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc.Core;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.Extensions.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding
@@ -22,7 +24,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
     {
         private readonly IModelMetadataProvider _metadataProvider;
         private readonly IModelBinderProvider[] _providers;
-
+        private readonly ILogger _logger;
         private readonly ConcurrentDictionary<Key, IModelBinder> _cache;
 
         /// <summary>
@@ -31,11 +33,28 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
         /// <param name="metadataProvider">The <see cref="IModelMetadataProvider"/>.</param>
         /// <param name="options">The <see cref="IOptions{TOptions}"/> for <see cref="MvcOptions"/>.</param>
         public ModelBinderFactory(IModelMetadataProvider metadataProvider, IOptions<MvcOptions> options)
+            : this(metadataProvider, options, NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ModelBinderFactory"/>.
+        /// </summary>
+        /// <param name="metadataProvider">The <see cref="IModelMetadataProvider"/>.</param>
+        /// <param name="options">The <see cref="IOptions{TOptions}"/> for <see cref="MvcOptions"/>.</param>
+        /// <param name="loggerFactory"></param>
+        public ModelBinderFactory(
+            IModelMetadataProvider metadataProvider,
+            IOptions<MvcOptions> options,
+            ILoggerFactory loggerFactory)
         {
             _metadataProvider = metadataProvider;
             _providers = options.Value.ModelBinderProviders.ToArray();
+            _logger = loggerFactory.CreateLogger(GetType());
 
             _cache = new ConcurrentDictionary<Key, IModelBinder>();
+
+            _logger.RegisteredModelBinderProviders(_providers);
         }
 
         /// <inheritdoc />

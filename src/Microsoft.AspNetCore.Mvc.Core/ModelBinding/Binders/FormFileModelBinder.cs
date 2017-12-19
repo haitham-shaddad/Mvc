@@ -8,8 +8,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -18,6 +21,26 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class FormFileModelBinder : IModelBinder
     {
+        protected readonly ILogger logger;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="FormFileModelBinder"/>.
+        /// </summary>
+        public FormFileModelBinder()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="FormFileModelBinder"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public FormFileModelBinder(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger(GetType());
+        }
+
+
         /// <inheritdoc />
         public async Task BindModelAsync(ModelBindingContext bindingContext)
         {
@@ -25,6 +48,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             var createFileCollection = bindingContext.ModelType == typeof(IFormFileCollection);
             if (!createFileCollection && !ModelBindingHelper.CanGetCompatibleCollection<IFormFile>(bindingContext))
@@ -128,6 +153,15 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                         postedFiles.Add(file);
                     }
                 }
+
+                if (postedFiles.Count == 0)
+                {
+                    logger.NoFilesFoundOnTheRequest();
+                }
+            }
+            else
+            {
+                logger.CannotBindToFilesCollectionDueToInvalidContentType(bindingContext);
             }
         }
 

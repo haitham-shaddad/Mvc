@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -13,6 +15,25 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class CollectionModelBinderProvider : IModelBinderProvider
     {
+        private readonly ILoggerFactory _loggerFactory;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="CollectionModelBinderProvider"/>.
+        /// </summary>
+        public CollectionModelBinderProvider()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="CollectionModelBinderProvider"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public CollectionModelBinderProvider(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory;
+        }
+
         /// <inheritdoc />
         public IModelBinder GetBinder(ModelBinderProviderContext context)
         {
@@ -37,7 +58,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 var elementBinder = context.CreateBinder(context.MetadataProvider.GetMetadataForType(elementType));
 
                 var binderType = typeof(CollectionModelBinder<>).MakeGenericType(collectionType.GenericTypeArguments);
-                return (IModelBinder)Activator.CreateInstance(binderType, elementBinder);
+                return (IModelBinder)Activator.CreateInstance(binderType, elementBinder, _loggerFactory);
             }
 
             // If the model type is IEnumerable<> then we need to know if we can assign a List<> to it, since
@@ -53,7 +74,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                     var elementBinder = context.CreateBinder(context.MetadataProvider.GetMetadataForType(elementType));
 
                     var binderType = typeof(CollectionModelBinder<>).MakeGenericType(enumerableType.GenericTypeArguments);
-                    return (IModelBinder)Activator.CreateInstance(binderType, elementBinder);
+                    return (IModelBinder)Activator.CreateInstance(binderType, elementBinder, _loggerFactory);
                 }
             }
 

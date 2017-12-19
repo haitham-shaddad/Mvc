@@ -648,8 +648,9 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             await binder.BindModelAsync(bindingContext);
 
             // Assert
-            Assert.Equal($"Rejected input formatter '{typeof(TestInputFormatter)}' for content type 'application/json'.", sink.Writes[0].State.ToString());
-            Assert.Equal($"Selected input formatter '{typeof(TestInputFormatter)}' for content type 'application/json'.", sink.Writes[1].State.ToString());
+            Assert.Equal($"Trying to bind model of type '{typeof(Person)}' ...", sink.Writes[0].State.ToString());
+            Assert.Equal($"Rejected input formatter '{typeof(TestInputFormatter)}' for content type 'application/json'.", sink.Writes[1].State.ToString());
+            Assert.Equal($"Selected input formatter '{typeof(TestInputFormatter)}' for content type 'application/json'.", sink.Writes[2].State.ToString());
         }
 
         [Fact]
@@ -677,6 +678,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             // Assert
             Assert.Collection(
                 sink.Writes,
+                write => Assert.Equal(
+                    $"Trying to bind model of type '{typeof(Person)}' ...", write.State.ToString()),
                 write => Assert.Equal(
                     $"Rejected input formatter '{typeof(TestInputFormatter)}' for content type 'multipart/form-data'.", write.State.ToString()),
                 write => Assert.Equal(

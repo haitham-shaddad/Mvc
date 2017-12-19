@@ -3,6 +3,8 @@
 
 using System;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -14,7 +16,15 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         private readonly bool _suppressBindingUndefinedValueToEnumType;
 
         public EnumTypeModelBinder(bool supressBindingUndefinedValueToEnumType, Type modelType)
-            : base(modelType)
+            : this(allowBindingUndefinedValueToEnumType, modelType, NullLoggerFactory.Instance)
+        {
+        }
+
+        public EnumTypeModelBinder(
+            bool allowBindingUndefinedValueToEnumType,
+            Type modelType,
+            ILoggerFactory loggerFactory)
+            : base(modelType, loggerFactory)
         {
             if (modelType == null)
             {

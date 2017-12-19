@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Core;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -26,7 +27,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// <param name="formatters">The list of <see cref="IInputFormatter"/>.</param>
         /// <param name="readerFactory">The <see cref="IHttpRequestStreamReaderFactory"/>.</param>
         public BodyModelBinderProvider(IList<IInputFormatter> formatters, IHttpRequestStreamReaderFactory readerFactory)
-            : this(formatters, readerFactory, loggerFactory: null)
+            : this(formatters, readerFactory, NullLoggerFactory.Instance)
         {
         }
 
@@ -36,7 +37,10 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// <param name="formatters">The list of <see cref="IInputFormatter"/>.</param>
         /// <param name="readerFactory">The <see cref="IHttpRequestStreamReaderFactory"/>.</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
-        public BodyModelBinderProvider(IList<IInputFormatter> formatters, IHttpRequestStreamReaderFactory readerFactory, ILoggerFactory loggerFactory)
+        public BodyModelBinderProvider(
+            IList<IInputFormatter> formatters,
+            IHttpRequestStreamReaderFactory readerFactory,
+            ILoggerFactory loggerFactory)
             : this(formatters, readerFactory, loggerFactory, options: null)
         {
         }

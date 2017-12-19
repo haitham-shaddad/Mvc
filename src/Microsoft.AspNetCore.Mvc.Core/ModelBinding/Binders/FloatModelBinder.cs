@@ -5,6 +5,9 @@ using System;
 using System.Globalization;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -15,10 +18,17 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class FloatModelBinder : IModelBinder
     {
         private readonly NumberStyles _supportedStyles;
+        protected readonly ILogger logger;
 
         public FloatModelBinder(NumberStyles supportedStyles)
+            : this(supportedStyles, NullLoggerFactory.Instance)
+        {
+        }
+
+        public FloatModelBinder(NumberStyles supportedStyles, ILoggerFactory loggerFactory)
         {
             _supportedStyles = supportedStyles;
+            logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <inheritdoc />
@@ -29,10 +39,14 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 throw new ArgumentNullException(nameof(bindingContext));
             }
 
+            logger.TryingToBindModel(bindingContext);
+
             var modelName = bindingContext.ModelName;
             var valueProviderResult = bindingContext.ValueProvider.GetValue(modelName);
             if (valueProviderResult == ValueProviderResult.None)
             {
+                logger.FoundNoValueOnRequest(bindingContext);
+
                 // no entry
                 return Task.CompletedTask;
             }

@@ -4,7 +4,10 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -14,6 +17,25 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class HeaderModelBinder : IModelBinder
     {
+        protected readonly ILogger logger;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="HeaderModelBinder"/>.
+        /// </summary>
+        public HeaderModelBinder()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="HeaderModelBinder"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public HeaderModelBinder(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger(GetType());
+        }
+
         /// <inheritdoc />
         public Task BindModelAsync(ModelBindingContext bindingContext)
         {
@@ -26,6 +48,13 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
             // Property name can be null if the model metadata represents a type (rather than a property or parameter).
             var headerName = bindingContext.FieldName;
+
+            logger.TryingToBindModel(bindingContext);
+
+            if (!request.Headers.ContainsKey(headerName))
+            {
+                logger.FoundNoValueOnRequest(bindingContext);
+            }
 
             object model;
             if (bindingContext.ModelType == typeof(string))

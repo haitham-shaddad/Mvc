@@ -5,6 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -21,7 +24,19 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// The <see cref="IModelBinder"/> for binding <typeparamref name="TElement"/>.
         /// </param>
         public ArrayModelBinder(IModelBinder elementBinder)
-            : base(elementBinder)
+            : this(elementBinder, NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ArrayModelBinder{TElement}"/>.
+        /// </summary>
+        /// <param name="elementBinder">
+        /// The <see cref="IModelBinder"/> for binding <typeparamref name="TElement"/>.
+        /// </param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public ArrayModelBinder(IModelBinder elementBinder, ILoggerFactory loggerFactory)
+            : base(elementBinder, loggerFactory)
         {
         }
 
@@ -47,7 +62,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             // If non-null, collection is a List<TElement>, never already a TElement[].
             return collection?.ToArray();
         }
-
+        
         /// <inheritdoc />
         protected override void CopyToModel(object target, IEnumerable<TElement> sourceCollection)
         {

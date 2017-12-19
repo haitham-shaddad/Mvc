@@ -11,10 +11,12 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.Formatters.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Mvc.Internal
@@ -95,7 +97,24 @@ namespace Microsoft.AspNetCore.Mvc.Internal
 
         private static readonly Action<ILogger, MethodInfo, string, string, Exception> _inferredParameterSource;
         private static readonly Action<ILogger, MethodInfo, Exception> _unableToInferParameterSources;
-
+        private static readonly Action<ILogger, IModelBinderProvider[], Exception> _registeredModelBinderProviders;
+        private static readonly Action<ILogger, string, string, Type, Type, Exception> _foundNoValueForPropertyOnRequest;
+        private static readonly Action<ILogger, string, string, Type, Exception> _foundNoValueForParameterOnRequest;
+        private static readonly Action<ILogger, string, Type, Exception> _noPublicSettableProperties;
+        private static readonly Action<ILogger, Type, Exception> _cannotBindToComplexType;
+        private static readonly Action<ILogger, string, Type, Exception> _cannotBindToFilesCollectionDueToInvalidContentType;
+        private static readonly Action<ILogger, Type, Exception> _cannotCreateHeaderModelBinder;
+        private static readonly Action<ILogger, Exception> _noFilesFoundOnTheRequest;
+        private static readonly Action<ILogger, string, string, Exception> _noNonIndexBasedFormatFoundForCollection;
+        private static readonly Action<ILogger, string, string, string, string, string, string, Exception> _tryingToBindCollectionUsingIndexes;
+        private static readonly Action<ILogger, string, string, string, string, string, string, Exception> _tryingToBindCollectionOfKeyValuePair;
+        private static readonly Action<ILogger, string, Type, Type, string, Exception> _tryingToBindProperty;
+        private static readonly Action<ILogger, Type, Exception> _tryingToBindModel;
+        private static readonly Action<ILogger, Type, Exception> _doneTryingToBindModel;
+        private static readonly Action<ILogger, string, string, Type, Exception> _tryingToBindParameter;
+        private static readonly Action<ILogger, string, string, Type, Exception> _doneTryingToBindParameter;
+        private static readonly Action<ILogger, string, string, Type, Exception> _tryingToValidateParameter;
+        private static readonly Action<ILogger, string, string, Type, Exception> _doneTryingToValidateParameter;
         private static readonly Action<ILogger, string, Exception> _unsupportedFormatFilterContentType;
         private static readonly Action<ILogger, string, MediaTypeCollection, Exception> _actionDoesNotSupportFormatFilterContentType;
         private static readonly Action<ILogger, string, Exception> _cannotApplyFormatFilterContentType;
@@ -404,6 +423,102 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                 LogLevel.Debug,
                 11,
                 "List of registered output formatters, in the following order: {OutputFormatters}");
+
+            _registeredModelBinderProviders = LoggerMessage.Define<IModelBinderProvider[]>(
+                LogLevel.Debug,
+                6,
+                "Registered model binder providers, in the following order: {ModelBinderProviders}");
+
+            _tryingToBindProperty = LoggerMessage.Define<string, Type, Type, string>(
+               LogLevel.Debug,
+               7,
+               "Trying to bind property '{PropertyName}'[{ModelType}] on type '{PropertyContainerType}' using the name '{ModelName}' in request data ...");
+
+            _foundNoValueForPropertyOnRequest = LoggerMessage.Define<string, string, Type, Type>(
+               LogLevel.Debug,
+               8,
+               "Could not find a value on the request with name '{ModelName}' for binding property '{ModelFieldName}'[{ModelType}] on type '{PropertyContainerType}'.");
+
+            _foundNoValueForParameterOnRequest = LoggerMessage.Define<string, string, Type>(
+               LogLevel.Debug,
+               9,
+               "Could not find a value on the request with name '{ModelName}' for binding parameter '{ModelFieldName}'[{ModelType}].");
+
+            _noPublicSettableProperties = LoggerMessage.Define<string, Type>(
+               LogLevel.Debug,
+               10,
+               "Could not bind to model with name '{ModelName}' and type '{ModelType}' as there were no public settable properties on it.");
+
+            _cannotBindToComplexType = LoggerMessage.Define<Type>(
+               LogLevel.Debug,
+               11,
+               "Could not bind to model of type '{ModelType}' as there were no values for any of the properties on the request to bind from.");
+
+            _cannotBindToFilesCollectionDueToInvalidContentType = LoggerMessage.Define<string, Type>(
+               LogLevel.Debug,
+               12,
+               "Could not bind to model with name '{ModelName}' having the model type '{ModelType}' as the request did not have content type of either 'application/x-www-form-urlencoded' or 'multipart/form-data'.");
+
+            _cannotCreateHeaderModelBinder = LoggerMessage.Define<Type>(
+               LogLevel.Debug,
+               13,
+               "Could not create binder to bind model with type '{ModelType}' as this binder only supports 'System.String' type or collection of 'System.String' type.");
+
+            _noFilesFoundOnTheRequest = LoggerMessage.Define(
+                LogLevel.Debug,
+                14,
+                "No files found on the request to bind the model to.");
+
+            _tryingToBindParameter = LoggerMessage.Define<string, string, Type>(
+                LogLevel.Debug,
+                15,
+                "Trying to bind {ParameterOrProperty} '{ParameterOrPropertyName}' of type '{ModelType}' ...");
+
+            _doneTryingToBindParameter = LoggerMessage.Define<string, string, Type>(
+                LogLevel.Debug,
+                16,
+                "Done trying to bind {ParameterOrProperty} '{ParameterOrPropertyName}' of type '{ModelType}'.");
+
+            _tryingToBindModel = LoggerMessage.Define<Type>(
+                LogLevel.Debug,
+                17,
+                "Trying to bind model of type '{ModelType}' ...");
+
+            _doneTryingToBindModel = LoggerMessage.Define<Type>(
+                LogLevel.Debug,
+                18,
+                "Done trying to bind model of type '{ModelType}'.");
+
+            _tryingToValidateParameter = LoggerMessage.Define<string, string, Type>(
+                LogLevel.Debug,
+                19,
+                "Trying to validate the bound {ParameterOrProperty} '{ParameterOrPropertyName}' of type '{ModelType}' ...");
+
+            _doneTryingToValidateParameter = LoggerMessage.Define<string, string, Type>(
+                LogLevel.Debug,
+                20,
+                "Done trying to validate the bound {ParameterOrProperty} '{ParameterOrPropertyName}' of type '{ModelType}'.");
+
+            _noNonIndexBasedFormatFoundForCollection = LoggerMessage.Define<string, string>(
+                LogLevel.Debug,
+                21,
+                "Could not bind to collection using the format like {ModelName}=value1&{ModelName}=value2 etc.");
+
+            _tryingToBindCollectionUsingIndexes = LoggerMessage.Define<string, string, string, string, string, string>(
+                LogLevel.Debug,
+                22,
+                "Trying to bind model using indexes. Example formats being looked for: " +
+                "[0]=value1&[1]=value2, " +
+                "{ModelName}[0]=value1&{ModelName}[1]=value2, " +
+                "{ModelName}.index=zero&{ModelName}.index=one&{ModelName}[zero]=value1&{ModelName}[one]=value2");
+
+            _tryingToBindCollectionOfKeyValuePair = LoggerMessage.Define<string, string, string, string, string, string>(
+                LogLevel.Debug,
+                23,
+                "Trying to bind collection of keyvaluepair. Example formats being looked for: " +
+                "[0].Key=key1&[0].Value=value1&[1].Key=key2&[1].Value=value2, " +
+                "{ModelName}[0].Key=key1&{ModelName}[0].Value=value1&{ModelName}[1].Key=key2&{ModelName}[1].Value=value2, " +
+                "{ModelName}[key1]=value1&{ModelName}[key2]=value2");
         }
 
         public static void RegisteredOutputFormatters(this ILogger logger, IEnumerable<IOutputFormatter> outputFormatters)
@@ -879,6 +994,169 @@ namespace Microsoft.AspNetCore.Mvc.Internal
             {
                 _unableToInferParameterSources(logger, actionModel.ActionMethod, null);
             }
+        }
+
+        public static void RegisteredModelBinderProviders(this ILogger logger, IModelBinderProvider[] providers)
+        {
+            _registeredModelBinderProviders(logger, providers, null);
+        }
+
+        public static void FoundNoValueOnRequest(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            if (!logger.IsEnabled(LogLevel.Debug))
+            {
+                return;
+            }
+
+            var modelMetadata = bindingContext.ModelMetadata;
+            var isProperty = modelMetadata.ContainerType != null;
+            var modelName = GetModelName(bindingContext);
+
+            if (isProperty)
+            {
+                _foundNoValueForPropertyOnRequest(
+                    logger,
+                    modelName,
+                    modelMetadata.PropertyName,
+                    bindingContext.ModelType,
+                    modelMetadata.ContainerType,
+                    null);
+            }
+            else
+            {
+                _foundNoValueForParameterOnRequest(
+                    logger,
+                    modelName,
+                    modelMetadata.PropertyName,
+                    bindingContext.ModelType,
+                    null);
+            }
+        }
+
+        public static void NoPublicSettableProperties(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            _noPublicSettableProperties(logger, GetModelName(bindingContext), bindingContext.ModelType, null);
+        }
+
+        public static void CannotBindToComplexType(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            _cannotBindToComplexType(logger, bindingContext.ModelType, null);
+        }
+
+        public static void CannotBindToFilesCollectionDueToInvalidContentType(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            _cannotBindToFilesCollectionDueToInvalidContentType(logger, GetModelName(bindingContext), bindingContext.ModelType, null);
+        }
+
+        public static void CannotCreateHeaderModelBinder(this ILogger logger, Type modelType)
+        {
+            _cannotCreateHeaderModelBinder(logger, modelType, null);
+        }
+
+        public static void NoFilesFoundOnTheRequest(this ILogger logger)
+        {
+            _noFilesFoundOnTheRequest(logger, null);
+        }
+
+        public static void TryingToBindModel(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            if (!logger.IsEnabled(LogLevel.Debug))
+            {
+                return;
+            }
+
+            var modelMetadata = bindingContext.ModelMetadata;
+            var isProperty = modelMetadata.ContainerType != null;
+
+            if (isProperty)
+            {
+                _tryingToBindProperty(
+                    logger,
+                    modelMetadata.PropertyName,
+                    modelMetadata.ModelType,
+                    modelMetadata.ContainerType,
+                    GetModelName(bindingContext),
+                    null);
+            }
+            else
+            {
+                _tryingToBindModel(logger, bindingContext.ModelType, null);
+            }
+        }
+
+        public static void DoneTryingToBindModel(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            _doneTryingToBindModel(logger, bindingContext.ModelType, null);
+        }
+
+        public static void TryingToBindParameter(this ILogger logger, ParameterDescriptor parameter, ModelBindingContext bindingContext)
+        {
+            _tryingToBindParameter(logger, GetParameterOrProperty(parameter), parameter.Name, bindingContext.ModelType, null);
+        }
+
+        public static void DoneTryingToBindParameter(this ILogger logger, ParameterDescriptor parameter, ModelBindingContext bindingContext)
+        {
+            _doneTryingToBindParameter(logger, GetParameterOrProperty(parameter), parameter.Name, bindingContext.ModelType, null);
+        }
+
+        public static void TryingToValidateParameter(this ILogger logger, ParameterDescriptor parameter, ModelBindingContext bindingContext)
+        {
+            _tryingToValidateParameter(logger, GetParameterOrProperty(parameter), parameter.Name, bindingContext.ModelType, null);
+        }
+
+        public static void DoneTryingToValidateParameter(this ILogger logger, ParameterDescriptor parameter, ModelBindingContext bindingContext)
+        {
+            _doneTryingToValidateParameter(logger, GetParameterOrProperty(parameter), parameter.Name, bindingContext.ModelType, null);
+        }
+
+        public static void NoNonIndexBasedFormatFoundForCollection(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            var modelName = GetModelName(bindingContext);
+            _noNonIndexBasedFormatFoundForCollection(logger, modelName, modelName, null);
+        }
+
+        public static void TryingToBindCollectionUsingIndexes(this ILogger logger, ModelBindingContext bindingContext)
+        {
+            if (!logger.IsEnabled(LogLevel.Debug))
+            {
+                return;
+            }
+
+            var modelName = GetModelName(bindingContext);
+
+            var enumerableType = ClosedGenericMatcher.ExtractGenericInterface(bindingContext.ModelType, typeof(IEnumerable<>));
+            if (enumerableType != null)
+            {
+                var elementType = enumerableType.GenericTypeArguments[0];
+                if (elementType.IsGenericType && elementType.GetGenericTypeDefinition().GetTypeInfo() == typeof(KeyValuePair<,>).GetTypeInfo())
+                {
+                    _tryingToBindCollectionOfKeyValuePair(logger, modelName, modelName, modelName, modelName, modelName, modelName, null);
+                    return;
+                }
+            }
+
+            _tryingToBindCollectionUsingIndexes(logger, modelName, modelName, modelName, modelName, modelName, modelName, null);
+        }
+
+        private static string GetModelName(ModelBindingContext bindingContext)
+        {
+            var modelMetadata = bindingContext.ModelMetadata;
+            var modelName = bindingContext.ModelName;
+            if (string.IsNullOrEmpty(modelName))
+            {
+                modelName = modelMetadata.BinderModelName ?? modelMetadata.PropertyName;
+            }
+            return modelName;
+        }
+
+        private static string GetParameterOrProperty(ParameterDescriptor parameter)
+        {
+            var parameterOrProperty = "parameter";
+            if (parameter is ControllerBoundPropertyDescriptor)
+            {
+                parameterOrProperty = "property";
+            }
+            return parameterOrProperty;
         }
 
         private static void LogFilterExecutionPlan(

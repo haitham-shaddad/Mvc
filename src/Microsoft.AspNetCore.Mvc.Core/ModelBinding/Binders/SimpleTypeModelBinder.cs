@@ -5,6 +5,9 @@ using System;
 using System.ComponentModel;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -14,8 +17,40 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class SimpleTypeModelBinder : IModelBinder
     {
         private readonly TypeConverter _typeConverter;
+        protected readonly ILogger logger;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="SimpleTypeModelBinder"/>.
+        /// </summary>
+        public SimpleTypeModelBinder()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="SimpleTypeModelBinder"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public SimpleTypeModelBinder(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger(GetType());
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="SimpleTypeModelBinder"/>.
+        /// </summary>
+        /// <param name="type">The type to create binder for.</param>
         public SimpleTypeModelBinder(Type type)
+            : this(type, NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="SimpleTypeModelBinder"/>.
+        /// </summary>
+        /// <param name="type">The type to create binder for.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public SimpleTypeModelBinder(Type type, ILoggerFactory loggerFactory)
         {
             if (type == null)
             {
@@ -23,6 +58,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             }
 
             _typeConverter = TypeDescriptor.GetConverter(type);
+            logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <inheritdoc />
@@ -32,13 +68,17 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
-
+            
             var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
             if (valueProviderResult == ValueProviderResult.None)
             {
+                logger.FoundNoValueOnRequest(bindingContext);
+
                 // no entry
                 return Task.CompletedTask;
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             bindingContext.ModelState.SetModelValue(bindingContext.ModelName, valueProviderResult);
 

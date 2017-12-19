@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding
 {
@@ -19,6 +21,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
         private readonly IObjectModelValidator _validatorForBackCompatOnly;
         private readonly IModelValidatorProvider _validatorProvider;
         private readonly ValidatorCache _validatorCache;
+        protected readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance of <see cref="ParameterBinder"/>.
@@ -30,7 +33,27 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             IModelMetadataProvider modelMetadataProvider,
             IModelBinderFactory modelBinderFactory,
             IModelValidatorProvider validatorProvider)
-            : this(modelMetadataProvider, modelBinderFactory, validatorProvider, null)
+            : this(modelMetadataProvider, modelBinderFactory, validatorProvider, null, NullLoggerFactory.Instance)
+        {
+            if (validatorProvider == null)
+            {
+                throw new ArgumentNullException(nameof(validatorProvider));
+            }
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ParameterBinder"/>.
+        /// </summary>
+        /// <param name="modelMetadataProvider">The <see cref="IModelMetadataProvider"/>.</param>
+        /// <param name="modelBinderFactory">The <see cref="IModelBinderFactory"/>.</param>
+        /// <param name="validatorProvider">The <see cref="IModelValidatorProvider"/>.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public ParameterBinder(
+            IModelMetadataProvider modelMetadataProvider,
+            IModelBinderFactory modelBinderFactory,
+            IModelValidatorProvider validatorProvider,
+            ILoggerFactory loggerFactory)
+            : this(modelMetadataProvider, modelBinderFactory, validatorProvider, null, loggerFactory)
         {
             if (validatorProvider == null)
             {
@@ -49,7 +72,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             IModelMetadataProvider modelMetadataProvider,
             IModelBinderFactory modelBinderFactory,
             IObjectModelValidator validator)
-            : this(modelMetadataProvider, modelBinderFactory, null, validator)
+            : this(modelMetadataProvider, modelBinderFactory, null, validator, NullLoggerFactory.Instance)
         {
             // Note: When this obsolete constructor overload is removed, also remember
             // to remove the validatorForBackCompatOnly field.
@@ -64,7 +87,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             IModelMetadataProvider modelMetadataProvider,
             IModelBinderFactory modelBinderFactory,
             IModelValidatorProvider validatorProvider,
-            IObjectModelValidator validatorForBackCompatOnly)
+            IObjectModelValidator validatorForBackCompatOnly,
+            ILoggerFactory loggerFactory)
         {
             if (modelMetadataProvider == null)
             {
@@ -81,6 +105,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             _validatorProvider = validatorProvider;
             _validatorForBackCompatOnly = validatorForBackCompatOnly;
             _validatorCache = new ValidatorCache();
+            logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <summary>
@@ -199,7 +224,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                 parameter.BindingInfo,
                 parameter.Name);
             modelBindingContext.Model = value;
-
+            
             var parameterModelName = parameter.BindingInfo?.BinderModelName ?? metadata.BinderModelName;
             if (parameterModelName != null)
             {
@@ -217,7 +242,11 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                 modelBindingContext.ModelName = string.Empty;
             }
 
+            logger.TryingToBindParameter(parameter, modelBindingContext);
+
             await modelBinder.BindModelAsync(modelBindingContext);
+
+            logger.DoneTryingToBindParameter(parameter, modelBindingContext);
 
             var modelBindingResult = modelBindingContext.Result;
 
@@ -237,11 +266,15 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             }
             else
             {
+                logger.TryingToValidateParameter(parameter, modelBindingContext);
+
                 EnforceBindRequiredAndValidate(
                     actionContext,
                     metadata,
                     modelBindingContext,
                     modelBindingResult);
+
+                logger.DoneTryingToValidateParameter(parameter, modelBindingContext);
             }
 
             return modelBindingResult;

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Core;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -21,8 +22,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     {
         private readonly IList<IInputFormatter> _formatters;
         private readonly Func<Stream, Encoding, TextReader> _readerFactory;
-        private readonly ILogger _logger;
         private readonly MvcOptions _options;
+        protected readonly ILogger logger;
 
         /// <summary>
         /// Creates a new <see cref="BodyModelBinder"/>.
@@ -33,7 +34,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// instances for reading the request body.
         /// </param>
         public BodyModelBinder(IList<IInputFormatter> formatters, IHttpRequestStreamReaderFactory readerFactory)
-            : this(formatters, readerFactory, loggerFactory: null)
+            : this(formatters, readerFactory, NullLoggerFactory.Instance)
         {
         }
 
@@ -82,11 +83,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
             _formatters = formatters;
             _readerFactory = readerFactory.CreateReader;
-
-            if (loggerFactory != null)
-            {
-                _logger = loggerFactory.CreateLogger<BodyModelBinder>();
-            }
+            logger = loggerFactory.CreateLogger(GetType());
 
             _options = options;
         }
@@ -98,6 +95,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             // Special logic for body, treat the model name as string.Empty for the top level
             // object, but allow an override via BinderModelName. The purpose of this is to try
@@ -130,18 +129,18 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 if (_formatters[i].CanRead(formatterContext))
                 {
                     formatter = _formatters[i];
-                    _logger?.InputFormatterSelected(formatter, formatterContext);
+                    logger.InputFormatterSelected(formatter, formatterContext);
                     break;
                 }
                 else
                 {
-                    _logger?.InputFormatterRejected(_formatters[i], formatterContext);
+                    logger.InputFormatterRejected(_formatters[i], formatterContext);
                 }
             }
 
             if (formatter == null)
             {
-                _logger?.NoInputFormatterSelected(formatterContext);
+                logger.NoInputFormatterSelected(formatterContext);
                 var message = Resources.FormatUnsupportedContentType(httpContext.Request.ContentType);
                 var exception = new UnsupportedContentTypeException(message);
                 bindingContext.ModelState.AddModelError(modelBindingKey, exception, bindingContext.ModelMetadata);
@@ -186,7 +185,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         private bool ShouldHandleException(IInputFormatter formatter)
         {
             var policy = _options.InputFormatterExceptionPolicy;
-            
+
             // Any explicit policy on the formatters takes precedence over the global policy on MvcOptions
             if (formatter is IInputFormatterExceptionPolicy exceptionPolicy)
             {

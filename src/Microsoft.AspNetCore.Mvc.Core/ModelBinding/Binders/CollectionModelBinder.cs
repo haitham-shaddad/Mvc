@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -22,12 +24,23 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class CollectionModelBinder<TElement> : ICollectionModelBinder
     {
         private Func<object> _modelCreator;
+        protected readonly ILogger logger;
 
         /// <summary>
         /// Creates a new <see cref="CollectionModelBinder{TElement}"/>.
         /// </summary>
         /// <param name="elementBinder">The <see cref="IModelBinder"/> for binding elements.</param>
         public CollectionModelBinder(IModelBinder elementBinder)
+            : this(elementBinder, NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="CollectionModelBinder{TElement}"/>.
+        /// </summary>
+        /// <param name="elementBinder">The <see cref="IModelBinder"/> for binding elements.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public CollectionModelBinder(IModelBinder elementBinder, ILoggerFactory loggerFactory)
         {
             if (elementBinder == null)
             {
@@ -35,6 +48,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             }
 
             ElementBinder = elementBinder;
+            logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <summary>
@@ -50,9 +64,13 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 throw new ArgumentNullException(nameof(bindingContext));
             }
 
+            logger.TryingToBindModel(bindingContext);
+
             var model = bindingContext.Model;
             if (!bindingContext.ValueProvider.ContainsPrefix(bindingContext.ModelName))
             {
+                logger.FoundNoValueOnRequest(bindingContext);
+
                 // If we failed to find data for a top-level model, then generate a
                 // default 'empty' model (or use existing Model) and return it.
                 if (bindingContext.IsTopLevelObject)
@@ -73,6 +91,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             CollectionResult result;
             if (valueProviderResult == ValueProviderResult.None)
             {
+                logger.NoNonIndexBasedFormatFoundForCollection(bindingContext);
                 result = await BindComplexCollection(bindingContext);
             }
             else
@@ -206,6 +225,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         // Used when the ValueProvider contains the collection to be bound as multiple elements, e.g. foo[0], foo[1].
         private Task<CollectionResult> BindComplexCollection(ModelBindingContext bindingContext)
         {
+            logger.TryingToBindCollectionUsingIndexes(bindingContext);
+
             var indexPropertyName = ModelNames.CreatePropertyModelName(bindingContext.ModelName, "index");
             var valueProviderResultIndex = bindingContext.ValueProvider.GetValue(indexPropertyName);
             var indexNames = GetIndexNamesFromValueProviderResult(valueProviderResultIndex);
@@ -272,7 +293,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
                 // If we're working with a fixed set of indexes then this is the format like:
                 //
-                //  ?parameter.index=zero,one,two&parameter[zero]=0&&parameter[one]=1&parameter[two]=2...
+                //  ?parameter.index=zero&parameter.index=one&parameter.index=two&parameter[zero]=0&parameter[one]=1&parameter[two]=2...
                 //
                 // We need to provide this data to the validation system so it can 'replay' the keys.
                 // But we can't just set ValidationState here, because it needs the 'real' model.

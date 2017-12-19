@@ -3,6 +3,9 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Internal;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 {
@@ -11,6 +14,25 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class ByteArrayModelBinder : IModelBinder
     {
+        protected readonly ILogger logger;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ByteArrayModelBinder"/>.
+        /// </summary>
+        public ByteArrayModelBinder()
+            : this(NullLoggerFactory.Instance)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ByteArrayModelBinder"/>.
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
+        public ByteArrayModelBinder(ILoggerFactory loggerFactory)
+        {
+            logger = loggerFactory.CreateLogger(GetType());
+        }
+
         /// <inheritdoc />
         public Task BindModelAsync(ModelBindingContext bindingContext)
         {
@@ -18,6 +40,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
+
+            logger.TryingToBindModel(bindingContext);
 
             // Check for missing data case 1: There was no <input ... /> element containing this data.
             var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
