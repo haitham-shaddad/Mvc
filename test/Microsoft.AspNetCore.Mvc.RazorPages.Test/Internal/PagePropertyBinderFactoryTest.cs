@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -155,7 +158,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             var actionDescriptor = new CompiledPageActionDescriptor
             {
-                BoundProperties = new []
+                BoundProperties = new[]
                 {
                     new PageBoundPropertyDescriptor()
                     {
@@ -192,10 +195,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             var page = new PageWithProperty
             {
-                PageContext = new PageContext()
-                {
-                    HttpContext = new DefaultHttpContext(),
-                },
+                PageContext = GetPageContext(),
             };
 
             // Act
@@ -253,10 +253,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             var page = new PageWithProperty
             {
-                PageContext = new PageContext()
-                {
-                    HttpContext = new DefaultHttpContext(),
-                }
+                PageContext = GetPageContext()
             };
 
             var model = new PageModelWithProperty();
@@ -304,10 +301,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             var page = new PageWithProperty
             {
-                PageContext = new PageContext()
-                {
-                    HttpContext = new DefaultHttpContext(),
-                }
+                PageContext = GetPageContext()
             };
 
             var model = new PageModelWithDefaultValue();
@@ -368,16 +362,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             var page = new PageWithProperty
             {
-                PageContext = new PageContext()
-                {
-                    HttpContext = new DefaultHttpContext()
-                    {
-                        Request=
-                        {
-                            Method = method,
-                        }
-                    }
-                }
+                PageContext = GetPageContext(method)
             };
 
             var model = new PageModelWithSupportsGetProperty();
@@ -434,10 +419,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             var page = new PageWithProperty
             {
-                PageContext = new PageContext()
-                {
-                    HttpContext = new DefaultHttpContext(),
-                }
+                PageContext = GetPageContext()
             };
 
             page.HttpContext.Request.Method = "Post";
@@ -450,6 +432,27 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
             // Assert
             Assert.Equal("value", model.SupportsGet);
             Assert.Equal("value", model.Default);
+        }
+
+        private PageContext GetPageContext(string httpMethod = null)
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+
+            var httpContext = new DefaultHttpContext()
+            {
+                RequestServices = services.BuildServiceProvider()
+            };
+
+            if (httpMethod != null)
+            {
+                httpContext.Request.Method = httpMethod;
+            }
+
+            return new PageContext()
+            {
+                HttpContext = httpContext
+            };
         }
 
         private class TestParameterBinder : ParameterBinder

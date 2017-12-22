@@ -24,6 +24,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class CollectionModelBinder<TElement> : ICollectionModelBinder
     {
         private Func<object> _modelCreator;
+        private readonly ILoggerFactory _loggerFactory;
         protected readonly ILogger logger;
 
         /// <summary>
@@ -48,6 +49,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             }
 
             ElementBinder = elementBinder;
+            _loggerFactory = loggerFactory;
             logger = loggerFactory.CreateLogger(GetType());
         }
 
@@ -193,12 +195,14 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
             foreach (var value in values)
             {
-                bindingContext.ValueProvider = new CompositeValueProvider
-                {
-                    // our temporary provider goes at the front of the list
-                    new ElementalValueProvider(bindingContext.ModelName, value, values.Culture),
-                    bindingContext.ValueProvider
-                };
+                bindingContext.ValueProvider = new CompositeValueProvider(
+                    new[]
+                    {
+                        // our temporary provider goes at the front of the list
+                        new ElementalValueProvider(bindingContext.ModelName, value, values.Culture),
+                        bindingContext.ValueProvider
+                    },
+                    _loggerFactory);
 
                 using (bindingContext.EnterNestedScope(
                     elementMetadata,

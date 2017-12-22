@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -12,12 +13,14 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
-using System.Linq;
 
 namespace Microsoft.AspNetCore.Mvc.Internal
 {
@@ -1042,10 +1045,7 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                     return Task.FromResult(result);
                 });
 
-            var controllerContext = new ControllerContext
-            {
-                ActionDescriptor = actionDescriptor,
-            };
+            var controllerContext = GetControllerContext(actionDescriptor);
 
             var arguments = new Dictionary<string, object>(StringComparer.Ordinal);
             var modelState = controllerContext.ModelState;
@@ -1073,10 +1073,16 @@ namespace Microsoft.AspNetCore.Mvc.Internal
 
         private static ControllerContext GetControllerContext(ControllerActionDescriptor descriptor = null)
         {
+            var services = new ServiceCollection();
+            services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+
             var context = new ControllerContext()
             {
                 ActionDescriptor = descriptor ?? GetActionDescriptor(),
-                HttpContext = new DefaultHttpContext(),
+                HttpContext = new DefaultHttpContext()
+                {
+                    RequestServices = services.BuildServiceProvider()
+                },
                 RouteData = new RouteData(),
             };
 
