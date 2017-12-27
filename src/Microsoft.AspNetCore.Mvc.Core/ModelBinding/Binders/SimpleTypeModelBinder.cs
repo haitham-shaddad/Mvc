@@ -17,7 +17,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class SimpleTypeModelBinder : IModelBinder
     {
         private readonly TypeConverter _typeConverter;
-        protected readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance of <see cref="SimpleTypeModelBinder"/>.
@@ -33,7 +32,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
         public SimpleTypeModelBinder(ILoggerFactory loggerFactory)
         {
-            logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <summary>
@@ -58,8 +57,13 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             }
 
             _typeConverter = TypeDescriptor.GetConverter(type);
-            logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
         }
+
+        /// <summary>
+        /// The <see cref="ILogger"/> used for logging in this binder.
+        /// </summary>
+        protected ILogger Logger { get; }
 
         /// <inheritdoc />
         public Task BindModelAsync(ModelBindingContext bindingContext)
@@ -72,13 +76,14 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
             if (valueProviderResult == ValueProviderResult.None)
             {
-                logger.FoundNoValueOnRequest(bindingContext);
+                Logger.FoundNoValueInRequest(bindingContext);
 
                 // no entry
+                Logger.DoneAttemptingToBindModel(bindingContext);
                 return Task.CompletedTask;
             }
 
-            logger.TryingToBindModel(bindingContext);
+            Logger.AttemptingToBindModel(bindingContext);
 
             bindingContext.ModelState.SetModelValue(bindingContext.ModelName, valueProviderResult);
 
@@ -114,6 +119,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
                 CheckModel(bindingContext, valueProviderResult, model);
 
+                Logger.DoneAttemptingToBindModel(bindingContext);
                 return Task.CompletedTask;
             }
             catch (Exception exception)

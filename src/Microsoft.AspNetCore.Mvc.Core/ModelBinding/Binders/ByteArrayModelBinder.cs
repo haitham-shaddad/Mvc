@@ -14,8 +14,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     /// </summary>
     public class ByteArrayModelBinder : IModelBinder
     {
-        protected readonly ILogger logger;
-
         /// <summary>
         /// Initializes a new instance of <see cref="ByteArrayModelBinder"/>.
         /// </summary>
@@ -30,19 +28,31 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
         public ByteArrayModelBinder(ILoggerFactory loggerFactory)
         {
-            logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
         }
 
+        /// <summary>
+        /// The <see cref="ILogger"/> used for logging in this binder.
+        /// </summary>
+        protected ILogger Logger { get; }
+
         /// <inheritdoc />
-        public Task BindModelAsync(ModelBindingContext bindingContext)
+        public async Task BindModelAsync(ModelBindingContext bindingContext)
         {
             if (bindingContext == null)
             {
                 throw new ArgumentNullException(nameof(bindingContext));
             }
 
-            logger.TryingToBindModel(bindingContext);
+            Logger.AttemptingToBindModel(bindingContext);
 
+            await BindModelAsyncInternal(bindingContext);
+
+            Logger.DoneAttemptingToBindModel(bindingContext);
+        }
+
+        private Task BindModelAsyncInternal(ModelBindingContext bindingContext)
+        {
             // Check for missing data case 1: There was no <input ... /> element containing this data.
             var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
             if (valueProviderResult == ValueProviderResult.None)
@@ -63,7 +73,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             {
                 var model = Convert.FromBase64String(value);
                 bindingContext.Result = ModelBindingResult.Success(model);
-                return Task.CompletedTask;
             }
             catch (Exception exception)
             {
@@ -71,8 +80,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                     bindingContext.ModelName,
                     exception,
                     bindingContext.ModelMetadata);
-                return Task.CompletedTask;
             }
+            return Task.CompletedTask;
         }
     }
 }

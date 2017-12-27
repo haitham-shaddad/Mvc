@@ -75,6 +75,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 return;
             }
 
+            Logger.NoKeyValueFormatForDictionaryModelBinder(bindingContext);
+
             var enumerableValueProvider = bindingContext.ValueProvider as IEnumerableValueProvider;
             if (enumerableValueProvider == null)
             {
@@ -82,7 +84,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 // replaced the ValueProvider with something other than a CompositeValueProvider.
                 return;
             }
-
+            
             // Attempt to bind dictionary from a set of prefix[key]=value entries. Get the short and long keys first.
             var keys = enumerableValueProvider.GetKeysFromPrefix(bindingContext.ModelName);
             if (keys.Count == 0)

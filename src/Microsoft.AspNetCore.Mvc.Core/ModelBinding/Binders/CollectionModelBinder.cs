@@ -25,8 +25,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     {
         private Func<object> _modelCreator;
         private readonly ILoggerFactory _loggerFactory;
-        protected readonly ILogger logger;
-
+        
         /// <summary>
         /// Creates a new <see cref="CollectionModelBinder{TElement}"/>.
         /// </summary>
@@ -50,13 +49,18 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
 
             ElementBinder = elementBinder;
             _loggerFactory = loggerFactory;
-            logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
         }
 
         /// <summary>
         /// Gets the <see cref="IModelBinder"/> instances for binding collection elements.
         /// </summary>
         protected IModelBinder ElementBinder { get; }
+
+        /// <summary>
+        /// The <see cref="ILogger"/> used for logging in this binder.
+        /// </summary>
+        protected ILogger Logger { get; }
 
         /// <inheritdoc />
         public virtual async Task BindModelAsync(ModelBindingContext bindingContext)
@@ -66,12 +70,12 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 throw new ArgumentNullException(nameof(bindingContext));
             }
 
-            logger.TryingToBindModel(bindingContext);
+            Logger.AttemptingToBindModel(bindingContext);
 
             var model = bindingContext.Model;
             if (!bindingContext.ValueProvider.ContainsPrefix(bindingContext.ModelName))
             {
-                logger.FoundNoValueOnRequest(bindingContext);
+                Logger.FoundNoValueInRequest(bindingContext);
 
                 // If we failed to find data for a top-level model, then generate a
                 // default 'empty' model (or use existing Model) and return it.
@@ -85,6 +89,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                     bindingContext.Result = ModelBindingResult.Success(model);
                 }
 
+                Logger.DoneAttemptingToBindModel(bindingContext);
                 return;
             }
 
@@ -93,7 +98,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             CollectionResult result;
             if (valueProviderResult == ValueProviderResult.None)
             {
-                logger.NoNonIndexBasedFormatFoundForCollection(bindingContext);
+                Logger.NoNonIndexBasedFormatFoundForCollection(bindingContext);
                 result = await BindComplexCollection(bindingContext);
             }
             else
@@ -131,6 +136,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             }
 
             bindingContext.Result = ModelBindingResult.Success(model);
+            Logger.DoneAttemptingToBindModel(bindingContext);
         }
 
         /// <inheritdoc />
@@ -229,7 +235,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         // Used when the ValueProvider contains the collection to be bound as multiple elements, e.g. foo[0], foo[1].
         private Task<CollectionResult> BindComplexCollection(ModelBindingContext bindingContext)
         {
-            logger.TryingToBindCollectionUsingIndexes(bindingContext);
+            Logger.AttemptingToBindCollectionUsingIndices(bindingContext);
 
             var indexPropertyName = ModelNames.CreatePropertyModelName(bindingContext.ModelName, "index");
             var valueProviderResultIndex = bindingContext.ValueProvider.GetValue(indexPropertyName);

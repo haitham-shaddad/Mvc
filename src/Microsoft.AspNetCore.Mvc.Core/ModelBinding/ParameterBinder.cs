@@ -21,8 +21,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
         private readonly IObjectModelValidator _validatorForBackCompatOnly;
         private readonly IModelValidatorProvider _validatorProvider;
         private readonly ValidatorCache _validatorCache;
-        protected readonly ILogger logger;
-
+        
         /// <summary>
         /// Initializes a new instance of <see cref="ParameterBinder"/>.
         /// </summary>
@@ -35,10 +34,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             IModelValidatorProvider validatorProvider)
             : this(modelMetadataProvider, modelBinderFactory, validatorProvider, null, NullLoggerFactory.Instance)
         {
-            if (validatorProvider == null)
-            {
-                throw new ArgumentNullException(nameof(validatorProvider));
-            }
         }
 
         /// <summary>
@@ -105,8 +100,13 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             _validatorProvider = validatorProvider;
             _validatorForBackCompatOnly = validatorForBackCompatOnly;
             _validatorCache = new ValidatorCache();
-            logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
         }
+
+        /// <summary>
+        /// The <see cref="ILogger"/> used for logging in this binder.
+        /// </summary>
+        protected ILogger Logger { get; }
 
         /// <summary>
         /// Initializes and binds a model specified by <paramref name="parameter"/>.
@@ -224,7 +224,9 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                 parameter.BindingInfo,
                 parameter.Name);
             modelBindingContext.Model = value;
-            
+
+            Logger.AttemptingToBindParameter(parameter, modelBindingContext);
+
             var parameterModelName = parameter.BindingInfo?.BinderModelName ?? metadata.BinderModelName;
             if (parameterModelName != null)
             {
@@ -241,12 +243,10 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                 // No match, fallback to empty string as the prefix.
                 modelBindingContext.ModelName = string.Empty;
             }
-
-            logger.TryingToBindParameter(parameter, modelBindingContext);
-
+            
             await modelBinder.BindModelAsync(modelBindingContext);
 
-            logger.DoneTryingToBindParameter(parameter, modelBindingContext);
+            Logger.DoneAttemptingToBindParameter(parameter, modelBindingContext);
 
             var modelBindingResult = modelBindingContext.Result;
 
@@ -266,7 +266,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             }
             else
             {
-                logger.TryingToValidateParameter(parameter, modelBindingContext);
+                Logger.AttemptingToValidateParameter(parameter, modelBindingContext);
 
                 EnforceBindRequiredAndValidate(
                     actionContext,
@@ -274,7 +274,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                     modelBindingContext,
                     modelBindingResult);
 
-                logger.DoneTryingToValidateParameter(parameter, modelBindingContext);
+                Logger.DoneAttemptingToValidateParameter(parameter, modelBindingContext);
             }
 
             return modelBindingResult;

@@ -16,12 +16,12 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         private readonly bool _suppressBindingUndefinedValueToEnumType;
 
         public EnumTypeModelBinder(bool supressBindingUndefinedValueToEnumType, Type modelType)
-            : this(allowBindingUndefinedValueToEnumType, modelType, NullLoggerFactory.Instance)
+            : this(supressBindingUndefinedValueToEnumType, modelType, NullLoggerFactory.Instance)
         {
         }
 
         public EnumTypeModelBinder(
-            bool allowBindingUndefinedValueToEnumType,
+            bool supressBindingUndefinedValueToEnumType,
             Type modelType,
             ILoggerFactory loggerFactory)
             : base(modelType, loggerFactory)

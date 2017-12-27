@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.AspNetCore.Mvc.ModelBinding
 {
@@ -19,6 +18,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
         private ActionContext _actionContext;
         private ModelStateDictionary _modelState;
         private ValidationStateDictionary _validationState;
+        private ILoggerFactory _loggerFactory;
 
         private State _state;
         private readonly Stack<State> _stack = new Stack<State>();
@@ -185,8 +185,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             }
         }
 
-        private ILoggerFactory LoggerFactory { get; set; }
-
         /// <summary>
         /// Creates a new <see cref="DefaultModelBindingContext"/> for top-level model binding operation.
         /// </summary>
@@ -237,7 +235,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                 BinderModelName = binderModelName,
                 BindingSource = bindingSource,
                 PropertyFilter = propertyFilterProvider?.PropertyFilter,
-                LoggerFactory = loggerFactory,
+                _loggerFactory = loggerFactory,
 
                 // Because this is the top-level context, FieldName and ModelName should be the same.
                 FieldName = binderModelName ?? modelName,
@@ -282,7 +280,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
             // to preserve the current state.
             if (modelMetadata.BindingSource != null && !modelMetadata.BindingSource.IsGreedy)
             {
-                ValueProvider = FilterValueProvider(OriginalValueProvider, modelMetadata.BindingSource, LoggerFactory);
+                ValueProvider = FilterValueProvider(OriginalValueProvider, modelMetadata.BindingSource, _loggerFactory);
             }
 
             Model = model;

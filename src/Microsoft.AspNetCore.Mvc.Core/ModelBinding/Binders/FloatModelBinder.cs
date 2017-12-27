@@ -18,7 +18,6 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
     public class FloatModelBinder : IModelBinder
     {
         private readonly NumberStyles _supportedStyles;
-        protected readonly ILogger logger;
 
         public FloatModelBinder(NumberStyles supportedStyles)
             : this(supportedStyles, NullLoggerFactory.Instance)
@@ -28,8 +27,13 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
         public FloatModelBinder(NumberStyles supportedStyles, ILoggerFactory loggerFactory)
         {
             _supportedStyles = supportedStyles;
-            logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(GetType());
         }
+
+        /// <summary>
+        /// The <see cref="ILogger"/> used for logging in this binder.
+        /// </summary>
+        protected ILogger Logger { get; }
 
         /// <inheritdoc />
         public Task BindModelAsync(ModelBindingContext bindingContext)
@@ -39,15 +43,16 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 throw new ArgumentNullException(nameof(bindingContext));
             }
 
-            logger.TryingToBindModel(bindingContext);
+            Logger.AttemptingToBindModel(bindingContext);
 
             var modelName = bindingContext.ModelName;
             var valueProviderResult = bindingContext.ValueProvider.GetValue(modelName);
             if (valueProviderResult == ValueProviderResult.None)
             {
-                logger.FoundNoValueOnRequest(bindingContext);
+                Logger.FoundNoValueInRequest(bindingContext);
 
                 // no entry
+                Logger.DoneAttemptingToBindModel(bindingContext);
                 return Task.CompletedTask;
             }
 
@@ -86,13 +91,10 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                         modelName,
                         metadata.ModelBindingMessageProvider.ValueMustNotBeNullAccessor(
                             valueProviderResult.ToString()));
-
-                    return Task.CompletedTask;
                 }
                 else
                 {
                     bindingContext.Result = ModelBindingResult.Success(model);
-                    return Task.CompletedTask;
                 }
             }
             catch (Exception exception)
@@ -108,8 +110,10 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
                 modelState.TryAddModelError(modelName, exception, metadata);
 
                 // Conversion failed.
-                return Task.CompletedTask;
             }
+
+            Logger.DoneAttemptingToBindModel(bindingContext);
+            return Task.CompletedTask;
         }
     }
 }

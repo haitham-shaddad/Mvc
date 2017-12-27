@@ -62,7 +62,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding.Binders
             // If non-null, collection is a List<TElement>, never already a TElement[].
             return collection?.ToArray();
         }
-        
+
         /// <inheritdoc />
         protected override void CopyToModel(object target, IEnumerable<TElement> sourceCollection)
         {

@@ -86,7 +86,7 @@ namespace MvcSandbox.Controllers
         public double DoubleProperty { get; set; }
 
         public float FloatProperty { get; set; }
-
+        
         public List<string> Aliases { get; set; }
     }
 
@@ -96,6 +96,8 @@ namespace MvcSandbox.Controllers
         public string AddressType { get; set; }
 
         public List<StateInfo> States { get; set; }
+
+        public Dictionary<string, string> StatesDictionary { get; set; }
     }
 
     public class StateInfo

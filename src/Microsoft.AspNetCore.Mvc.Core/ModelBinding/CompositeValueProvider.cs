@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -121,6 +122,8 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                     return true;
                 }
             }
+
+            logger.NoPrefixFromValueProviders(prefix);
             return false;
         }
 
@@ -140,7 +143,7 @@ namespace Microsoft.AspNetCore.Mvc.ModelBinding
                 }
             }
 
-            logger.LogDebug($"Could not get a value for the key '{key}' from any of the registered value providers.");
+            logger.NoValueFromValueProviders(key);
             return ValueProviderResult.None;
         }
 

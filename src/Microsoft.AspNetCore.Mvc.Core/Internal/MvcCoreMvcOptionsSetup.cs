@@ -23,6 +23,7 @@ namespace Microsoft.AspNetCore.Mvc.Internal
         private readonly IHttpRequestStreamReaderFactory _readerFactory;
         private readonly ILoggerFactory _loggerFactory;
 
+        // Used in tests
         public MvcCoreMvcOptionsSetup(IHttpRequestStreamReaderFactory readerFactory)
             : this(readerFactory, NullLoggerFactory.Instance)
         {
