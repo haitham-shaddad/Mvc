@@ -112,8 +112,7 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
             var fileProvider = GetFileProvider(result);
             if (fileProvider is NullFileProvider)
             {
-                throw new InvalidOperationException(
-                    Resources.FormatVirtualFileResultExecutor_NoFileProviderConfigured());
+                throw new InvalidOperationException(Resources.VirtualFileResultExecutor_NoFileProviderConfigured);
             }
 
             var normalizedPath = result.FileName;
