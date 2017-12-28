@@ -300,8 +300,7 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
             var (isRangeRequest, range) = RangeHelper.ParseRange(
                 context.HttpContext,
                 httpRequestHeaders,
-                fileLength,
-                Logger);
+                fileLength);
 
             if (!isRangeRequest)
             {
