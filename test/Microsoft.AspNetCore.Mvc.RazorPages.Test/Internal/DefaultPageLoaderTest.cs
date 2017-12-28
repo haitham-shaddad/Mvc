@@ -162,9 +162,13 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     Assert.Same(model, m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection
+            {
+                convention.Object,
+            };
 
             // Act
-            DefaultPageLoader.ApplyConventions(new[] { convention.Object }, model);
+            DefaultPageLoader.ApplyConventions(conventionCollection, model);
 
             // Assert
             convention.Verify();
@@ -192,9 +196,13 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     Assert.Same(model, m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection
+            {
+                globalConvention.Object,
+            };
 
             // Act
-            DefaultPageLoader.ApplyConventions(new[] { globalConvention.Object }, model);
+            DefaultPageLoader.ApplyConventions(conventionCollection, model);
 
             // Assert
             globalConvention.Verify();
@@ -220,9 +228,37 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     Assert.Same(handlerModel, m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection();
 
             // Act
-            DefaultPageLoader.ApplyConventions(Array.Empty<IPageApplicationModelConvention>(), applicationModel);
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
+
+            // Assert
+            handlerModelConvention.Verify();
+        }
+
+        [Fact]
+        public void ApplyConventions_InvokesHandlerModelConventions_DefinedGlobally()
+        {
+            // Arrange
+            var descriptor = new PageActionDescriptor();
+            var methodInfo = GetType().GetMethod(nameof(OnGet), BindingFlags.Instance | BindingFlags.NonPublic);
+
+            var applicationModel = new PageApplicationModel(descriptor, typeof(object).GetTypeInfo(), Array.Empty<object>());
+            var handlerModel = new PageHandlerModel(methodInfo, Array.Empty<object>());
+            applicationModel.HandlerMethods.Add(handlerModel);
+
+            var handlerModelConvention = new Mock<IPageHandlerModelConvention>();
+            handlerModelConvention.Setup(p => p.Apply(It.IsAny<PageHandlerModel>()))
+                .Callback((PageHandlerModel m) =>
+                {
+                    Assert.Same(handlerModel, m);
+                })
+                .Verifiable();
+            var conventionCollection = new PageConventionCollection { handlerModelConvention.Object };
+
+            // Act
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
 
             // Assert
             handlerModelConvention.Verify();
@@ -250,9 +286,10 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     m.Page.HandlerMethods.Remove(m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection();
 
             // Act
-            DefaultPageLoader.ApplyConventions(Array.Empty<IPageApplicationModelConvention>(), applicationModel);
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
 
             // Assert
             handlerModelConvention.Verify();
@@ -280,9 +317,41 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     Assert.Same(parameterModel, m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection();
 
             // Act
-            DefaultPageLoader.ApplyConventions(Array.Empty<IPageApplicationModelConvention>(), applicationModel);
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
+
+            // Assert
+            parameterModelConvention.Verify();
+        }
+
+        [Fact]
+        public void ApplyConventions_InvokesParameterModelConventions_DeclaredGlobally()
+        {
+            // Arrange
+            var descriptor = new PageActionDescriptor();
+            var methodInfo = GetType().GetMethod(nameof(OnGet), BindingFlags.Instance | BindingFlags.NonPublic);
+            var parameterInfo = methodInfo.GetParameters()[0];
+
+            var applicationModel = new PageApplicationModel(descriptor, typeof(object).GetTypeInfo(), Array.Empty<object>());
+            var handlerModel = new PageHandlerModel(methodInfo, Array.Empty<object>());
+            var parameterModel = new PageParameterModel(parameterInfo, Array.Empty<object>());
+
+            applicationModel.HandlerMethods.Add(handlerModel);
+            handlerModel.Parameters.Add(parameterModel);
+
+            var parameterModelConvention = new Mock<IPageParameterModelConvention>();
+            parameterModelConvention.Setup(p => p.Apply(It.IsAny<PageParameterModel>()))
+                .Callback((PageParameterModel m) =>
+                {
+                    Assert.Same(parameterModel, m);
+                })
+                .Verifiable();
+            var conventionCollection = new PageConventionCollection { parameterModelConvention.Object };
+
+            // Act
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
 
             // Assert
             parameterModelConvention.Verify();
@@ -313,9 +382,10 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     m.Handler.Parameters.Remove(m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection();
 
             // Act
-            DefaultPageLoader.ApplyConventions(Array.Empty<IPageApplicationModelConvention>(), applicationModel);
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
 
             // Assert
             parameterModelConvention.Verify();
@@ -346,9 +416,44 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     Assert.Same(propertyModel, m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection();
 
             // Act
-            DefaultPageLoader.ApplyConventions(Array.Empty<IPageApplicationModelConvention>(), applicationModel);
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
+
+            // Assert
+            propertyModelConvention.Verify();
+        }
+
+        [Fact]
+        public void ApplyConventions_InvokesPropertyModelConventions_DeclaredGlobally()
+        {
+            // Arrange
+            var descriptor = new PageActionDescriptor();
+            var methodInfo = GetType().GetMethod(nameof(OnGet), BindingFlags.Instance | BindingFlags.NonPublic);
+            var propertyInfo = GetType().GetProperty(nameof(TestProperty), BindingFlags.Instance | BindingFlags.NonPublic);
+            var parameterInfo = methodInfo.GetParameters()[0];
+
+            var applicationModel = new PageApplicationModel(descriptor, typeof(object).GetTypeInfo(), Array.Empty<object>());
+            var handlerModel = new PageHandlerModel(methodInfo, Array.Empty<object>());
+            var parameterModel = new PageParameterModel(parameterInfo, Array.Empty<object>());
+            var propertyModel = new PagePropertyModel(propertyInfo, Array.Empty<object>());
+
+            applicationModel.HandlerMethods.Add(handlerModel);
+            applicationModel.HandlerProperties.Add(propertyModel);
+            handlerModel.Parameters.Add(parameterModel);
+
+            var propertyModelConvention = new Mock<IPagePropertyModelConvention>();
+            propertyModelConvention.Setup(p => p.Apply(It.IsAny<PagePropertyModel>()))
+                .Callback((PagePropertyModel m) =>
+                {
+                    Assert.Same(propertyModel, m);
+                })
+                .Verifiable();
+            var conventionCollection = new PageConventionCollection { propertyModelConvention.Object };
+
+            // Act
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
 
             // Assert
             propertyModelConvention.Verify();
@@ -376,9 +481,10 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     m.Page.HandlerProperties.Remove(m);
                 })
                 .Verifiable();
+            var conventionCollection = new PageConventionCollection();
 
             // Act
-            DefaultPageLoader.ApplyConventions(Array.Empty<IPageApplicationModelConvention>(), applicationModel);
+            DefaultPageLoader.ApplyConventions(conventionCollection, applicationModel);
 
             // Assert
             propertyModelConvention.Verify();

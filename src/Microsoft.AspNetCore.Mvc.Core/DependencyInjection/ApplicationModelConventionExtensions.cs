@@ -18,7 +18,8 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="list">The list of <see cref="IApplicationModelConvention"/>s.</param>
         /// <typeparam name="TApplicationModelConvention">The type to remove.</typeparam>
-        public static void RemoveType<TApplicationModelConvention>(this IList<IApplicationModelConvention> list) where TApplicationModelConvention : IApplicationModelConvention
+        public static void RemoveType<TApplicationModelConvention>(this IList<IApplicationModelConvention> list) 
+            where TApplicationModelConvention : IApplicationModelConvention
         {
             if (list == null)
             {
@@ -127,6 +128,30 @@ namespace Microsoft.Extensions.DependencyInjection
             conventions.Add(new ParameterApplicationModelConvention(parameterModelConvention));
         }
 
+        /// <summary>
+        /// Adds a <see cref="IPropertyModelConvention"/> to all the parameters in the application.
+        /// </summary>
+        /// <param name="conventions">The list of <see cref="IApplicationModelConvention"/>
+        /// in <see cref="AspNetCore.Mvc.MvcOptions"/>.</param>
+        /// <param name="propertyModelConvention">The <see cref="IPropertyModelConvention"/> which needs to be
+        /// added.</param>
+        public static void Add(
+            this IList<IApplicationModelConvention> conventions,
+            IPropertyModelConvention propertyModelConvention)
+        {
+            if (conventions == null)
+            {
+                throw new ArgumentNullException(nameof(conventions));
+            }
+
+            if (propertyModelConvention == null)
+            {
+                throw new ArgumentNullException(nameof(propertyModelConvention));
+            }
+
+            conventions.Add(new PropertyApplicationModelConvention(propertyModelConvention));
+        }
+
         private class ParameterApplicationModelConvention : IApplicationModelConvention
         {
             private readonly IParameterModelConvention _parameterModelConvention;
@@ -229,6 +254,37 @@ namespace Microsoft.Extensions.DependencyInjection
                 foreach (var controller in controllers)
                 {
                     _controllerModelConvention.Apply(controller);
+                }
+            }
+        }
+
+        private class PropertyApplicationModelConvention : IApplicationModelConvention
+        {
+            private readonly IPropertyModelConvention _propertyModelConvention;
+
+            public PropertyApplicationModelConvention(IPropertyModelConvention propertyModelConvention)
+            {
+                _propertyModelConvention = propertyModelConvention ?? throw new ArgumentNullException(nameof(propertyModelConvention));
+            }
+
+            /// <inheritdoc />
+            public void Apply(ApplicationModel application)
+            {
+                if (application == null)
+                {
+                    throw new ArgumentNullException(nameof(application));
+                }
+
+                // Create copies of collections of controllers, actions and parameters as users could modify
+                // these collections from within the convention itself.
+                var controllers = application.Controllers.ToArray();
+                foreach (var controller in controllers)
+                {
+                    var properties = controller.ControllerProperties.ToArray();
+                    foreach (var property in properties)
+                    {
+                        _propertyModelConvention.Apply(property);
+                    }
                 }
             }
         }

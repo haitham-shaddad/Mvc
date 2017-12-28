@@ -39,8 +39,9 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                 convention.Apply(applicationModel);
             }
 
+            var controllers = applicationModel.Controllers.ToArray();
             // First apply the conventions from attributes in decreasing order of scope.
-            foreach (var controller in applicationModel.Controllers)
+            foreach (var controller in controllers)
             {
                 // ToArray is needed here to prevent issues with modifying the attributes collection
                 // while iterating it.
@@ -54,7 +55,8 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                     controllerConvention.Apply(controller);
                 }
 
-                foreach (var action in controller.Actions)
+                var actions = controller.Actions.ToArray();
+                foreach (var action in actions)
                 {
                     // ToArray is needed here to prevent issues with modifying the attributes collection
                     // while iterating it.
@@ -68,7 +70,8 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                         actionConvention.Apply(action);
                     }
 
-                    foreach (var parameter in action.Parameters)
+                    var parameters = action.Parameters.ToArray();
+                    foreach (var parameter in parameters)
                     {
                         // ToArray is needed here to prevent issues with modifying the attributes collection
                         // while iterating it.
@@ -81,6 +84,17 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                         {
                             parameterConvention.Apply(parameter);
                         }
+                    }
+                }
+
+                var properties = controller.ControllerProperties.ToArray();
+                foreach (var property in properties)
+                {
+                    var propertyConventions = property.Attributes.OfType<IPropertyModelConvention>();
+
+                    foreach (var propertyConvention in propertyConventions)
+                    {
+                        propertyConvention.Apply(property);
                     }
                 }
             }

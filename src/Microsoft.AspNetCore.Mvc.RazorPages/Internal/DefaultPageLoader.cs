@@ -17,7 +17,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
     {
         private readonly IPageApplicationModelProvider[] _applicationModelProviders;
         private readonly IViewCompilerProvider _viewCompilerProvider;
-        private readonly IPageApplicationModelConvention[] _conventions;
+        private readonly PageConventionCollection _conventions;
         private readonly FilterCollection _globalFilters;
 
         public DefaultPageLoader(
@@ -30,9 +30,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                 .OrderBy(p => p.Order)
                 .ToArray();
             _viewCompilerProvider = viewCompilerProvider;
-            _conventions = pageOptions.Value.Conventions
-                .OfType<IPageApplicationModelConvention>()
-                .ToArray();
+            _conventions = pageOptions.Value.Conventions;
             _globalFilters = mvcOptions.Value.Filters;
         }
 
@@ -66,15 +64,10 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
         }
 
         internal static void ApplyConventions(
-            IPageApplicationModelConvention[] globalApplicationModelConventions,
+            PageConventionCollection conventions,
             PageApplicationModel pageApplicationModel)
         {
-            for (var i = 0; i < globalApplicationModelConventions.Length; i++)
-            {
-                globalApplicationModelConventions[i].Apply(pageApplicationModel);
-            }
-
-            var applicationModelConventions = pageApplicationModel.HandlerTypeAttributes.OfType<IPageApplicationModelConvention>();
+            var applicationModelConventions = GetConventions<IPageApplicationModelConvention>(pageApplicationModel.HandlerTypeAttributes);
             foreach (var convention in applicationModelConventions)
             {
                 convention.Apply(pageApplicationModel);
@@ -83,7 +76,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
             var handlers = pageApplicationModel.HandlerMethods.ToArray();
             foreach (var handlerModel in handlers)
             {
-                var handlerModelConventions = handlerModel.Attributes.OfType<IPageHandlerModelConvention>();
+                var handlerModelConventions = GetConventions<IPageHandlerModelConvention>(handlerModel.Attributes);
                 foreach (var convention in handlerModelConventions)
                 {
                     convention.Apply(handlerModel);
@@ -92,7 +85,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                 var parameterModels = handlerModel.Parameters.ToArray();
                 foreach (var parameterModel in parameterModels)
                 {
-                    var parameterModelConventions = parameterModel.Attributes.OfType<IPageParameterModelConvention>();
+                    var parameterModelConventions = GetConventions<IPageParameterModelConvention>(parameterModel.Attributes);
                     foreach (var convention in parameterModelConventions)
                     {
                         convention.Apply(parameterModel);
@@ -103,11 +96,19 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
             var properties = pageApplicationModel.HandlerProperties.ToArray();
             foreach (var propertyModel in properties)
             {
-                var propertyModelConventions = propertyModel.Attributes.OfType<IPagePropertyModelConvention>();
+                var propertyModelConventions = GetConventions<IPagePropertyModelConvention>(propertyModel.Attributes);
                 foreach (var convention in propertyModelConventions)
                 {
                     convention.Apply(propertyModel);
                 }
+            }
+
+            IEnumerable<TConvention> GetConventions<TConvention>(
+                IReadOnlyList<object> attributes)
+            {
+                return Enumerable.Concat(
+                    conventions.OfType<TConvention>(),
+                    attributes.OfType<TConvention>());
             }
         }
     }

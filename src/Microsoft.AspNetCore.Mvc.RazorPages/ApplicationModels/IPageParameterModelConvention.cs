@@ -6,7 +6,7 @@ namespace Microsoft.AspNetCore.Mvc.ApplicationModels
     /// <summary>
     /// Allows customization of the <see cref="PageParameterModel"/>.
     /// </summary>
-    public interface IPageParameterModelConvention
+    public interface IPageParameterModelConvention : IPageConvention
     {
         /// <summary>
         /// Called to apply the convention to the <see cref="PageParameterModel"/>.
