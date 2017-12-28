@@ -110,6 +110,11 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
         private IFileInfo GetFileInformation(VirtualFileResult result)
         {
             var fileProvider = GetFileProvider(result);
+            if (fileProvider is NullFileProvider)
+            {
+                throw new InvalidOperationException(
+                    Resources.FormatVirtualFileResultExecutor_NoFileProviderConfigured());
+            }
 
             var normalizedPath = result.FileName;
             if (normalizedPath.StartsWith("~", StringComparison.Ordinal))

@@ -306,6 +306,7 @@ namespace Microsoft.AspNetCore.Mvc
             // Act
             var state = FileResultExecutorBase.GetPreconditionState(
                 httpRequestHeaders,
+                NullLogger.Instance,
                 lastModified,
                 etag);
 
@@ -342,6 +343,7 @@ namespace Microsoft.AspNetCore.Mvc
             // Act
             var state = FileResultExecutorBase.GetPreconditionState(
                 httpRequestHeaders,
+                NullLogger.Instance,
                 lastModified,
                 etag);
 
@@ -377,6 +379,7 @@ namespace Microsoft.AspNetCore.Mvc
             // Act
             var state = FileResultExecutorBase.GetPreconditionState(
                 httpRequestHeaders,
+                NullLogger.Instance,
                 lastModified,
                 etag);
 
@@ -404,6 +407,7 @@ namespace Microsoft.AspNetCore.Mvc
             // Act
             var ifRangeIsValid = FileResultExecutorBase.IfRangeValid(
                 httpRequestHeaders,
+                NullLogger.Instance,
                 lastModified,
                 etag);
 

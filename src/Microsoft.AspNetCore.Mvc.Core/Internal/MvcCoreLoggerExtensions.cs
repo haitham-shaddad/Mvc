@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc.Formatters.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
 namespace Microsoft.AspNetCore.Mvc.Internal
 {
@@ -100,7 +101,12 @@ namespace Microsoft.AspNetCore.Mvc.Internal
         private static readonly Action<ILogger, string, MediaTypeCollection, Exception> _actionDoesNotSupportFormatFilterContentType;
         private static readonly Action<ILogger, string, Exception> _cannotApplyFormatFilterContentType;
         private static readonly Action<ILogger, Exception> _actionDoesNotExplicitlySpecifyContentTypes;
+        private static readonly Action<ILogger, Exception> _multipleRangesNotSupported;
         private static readonly Action<ILogger, IEnumerable<MediaTypeSegmentWithQuality>, Exception> _selectingOutputFormatterUsingAcceptHeader;
+        private static readonly Action<ILogger, EntityTagHeaderValue, Exception> _ifMatchPreconditionFailed;
+        private static readonly Action<ILogger, DateTimeOffset?, DateTimeOffset?, Exception> _ifUnmodifiedSincePreconditionFailed;
+        private static readonly Action<ILogger, DateTimeOffset?, DateTimeOffset?, Exception> _ifRangeLastModifiedPreconditionFailed;
+        private static readonly Action<ILogger, EntityTagHeaderValue, EntityTagHeaderValue, Exception> _ifRangeETagPreconditionFailed;
         private static readonly Action<ILogger, IEnumerable<MediaTypeSegmentWithQuality>, MediaTypeCollection, Exception> _selectingOutputFormatterUsingAcceptHeaderAndExplicitContentTypes;
         private static readonly Action<ILogger, Exception> _selectingOutputFormatterWithoutUsingContentTypes;
         private static readonly Action<ILogger, MediaTypeCollection, Exception> _selectingOutputFormatterUsingContentTypes;
@@ -404,6 +410,31 @@ namespace Microsoft.AspNetCore.Mvc.Internal
                 LogLevel.Debug,
                 11,
                 "List of registered output formatters, in the following order: {OutputFormatters}");
+
+            _multipleRangesNotSupported = LoggerMessage.Define(
+                LogLevel.Warning,
+                6,
+                "Multiple ranges is not supported.");
+
+            _ifMatchPreconditionFailed = LoggerMessage.Define<EntityTagHeaderValue>(
+                LogLevel.Debug,
+                7,
+                "Current request's If-Match header check failed as the file's current etag '{CurrentETag}' does not match with any of the supplied etags.");
+
+            _ifUnmodifiedSincePreconditionFailed = LoggerMessage.Define<DateTimeOffset?, DateTimeOffset?>(
+                LogLevel.Debug,
+                8,
+                "Current request's If-Unmodified-Since header check failed as the file was modified (at '{lastModified}') after the If-Unmodified-Since date '{IfUnmodifiedSinceDate}'.");
+
+            _ifRangeLastModifiedPreconditionFailed = LoggerMessage.Define<DateTimeOffset?, DateTimeOffset?>(
+                LogLevel.Debug,
+                9,
+                "Could not serve range as the file was modified (at {LastModified}) after the if-Range's last modified date '{IfRangeLastModified}'.");
+
+            _ifRangeETagPreconditionFailed = LoggerMessage.Define<EntityTagHeaderValue, EntityTagHeaderValue>(
+                LogLevel.Debug,
+                10,
+                "Could not serve range as the file's current etag '{CurrentETag}' does not match the If-Range etag '{IfRangeETag}'.");
         }
 
         public static void RegisteredOutputFormatters(this ILogger logger, IEnumerable<IOutputFormatter> outputFormatters)
@@ -879,6 +910,40 @@ namespace Microsoft.AspNetCore.Mvc.Internal
             {
                 _unableToInferParameterSources(logger, actionModel.ActionMethod, null);
             }
+        }
+
+        public static void MultipleRangesNotSupported(this ILogger logger)
+        {
+            _multipleRangesNotSupported(logger, null);
+        }
+
+        public static void IfMatchPreconditionFailed(this ILogger logger, EntityTagHeaderValue etag)
+        {
+            _ifMatchPreconditionFailed(logger, etag, null);
+        }
+
+        public static void IfUnmodifiedSincePreconditionFailed(
+            this ILogger logger,
+            DateTimeOffset? lastModified,
+            DateTimeOffset? ifUnmodifiedSinceDate)
+        {
+            _ifUnmodifiedSincePreconditionFailed(logger, lastModified, ifUnmodifiedSinceDate, null);
+        }
+
+        public static void IfRangeLastModifiedPreconditionFailed(
+            this ILogger logger,
+            DateTimeOffset? lastModified,
+            DateTimeOffset? ifRangeLastModifiedDate)
+        {
+            _ifRangeLastModifiedPreconditionFailed(logger, lastModified, ifRangeLastModifiedDate, null);
+        }
+
+        public static void IfRangeETagPreconditionFailed(
+            this ILogger logger,
+            EntityTagHeaderValue currentETag,
+            EntityTagHeaderValue ifRangeTag)
+        {
+            _ifRangeETagPreconditionFailed(logger, currentETag, ifRangeTag, null);
         }
 
         private static void LogFilterExecutionPlan(
