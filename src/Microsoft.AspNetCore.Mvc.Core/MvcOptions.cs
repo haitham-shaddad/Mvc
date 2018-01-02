@@ -24,9 +24,11 @@ namespace Microsoft.AspNetCore.Mvc
         // See CompatibilitySwitch.cs for guide on how to implement these.
         private readonly CompatibilitySwitch<InputFormatterExceptionModelStatePolicy> _inputFormatterExceptionModelStatePolicy;
         private readonly CompatibilitySwitch<bool> _suppressBindingUndefinedValueToEnumType;
-        private readonly CompatibilitySwitch<bool> _suppressJsonDeserializationExceptionMessagesInModelState;
         private readonly ICompatibilitySwitch[] _switches;
 
+        /// <summary>
+        /// Creates a new instance of <see cref="MvcOptions"/>.
+        /// </summary>
         public MvcOptions()
         {
             CacheProfiles = new Dictionary<string, CacheProfile>(StringComparer.OrdinalIgnoreCase);
@@ -43,12 +45,11 @@ namespace Microsoft.AspNetCore.Mvc
 
             _inputFormatterExceptionModelStatePolicy = new CompatibilitySwitch<InputFormatterExceptionModelStatePolicy>(nameof(InputFormatterExceptionModelStatePolicy), InputFormatterExceptionModelStatePolicy.AllExceptions);
             _suppressBindingUndefinedValueToEnumType = new CompatibilitySwitch<bool>(nameof(SuppressBindingUndefinedValueToEnumType));
-            _suppressJsonDeserializationExceptionMessagesInModelState = new CompatibilitySwitch<bool>(nameof(SuppressJsonDeserializationExceptionMessagesInModelState));
+            
             _switches = new ICompatibilitySwitch[]
             {
                 _inputFormatterExceptionModelStatePolicy,
                 _suppressBindingUndefinedValueToEnumType,
-                _suppressJsonDeserializationExceptionMessagesInModelState,
             };
         }
 
@@ -210,7 +211,6 @@ namespace Microsoft.AspNetCore.Mvc
         /// </summary>
         public bool RequireHttpsPermanent { get; set; }
 
-
         /// <summary>
         /// Gets or sets the option to determine if model binding should convert all exceptions (including ones not related to bad input)
         /// that occur during deserialization in <see cref="IInputFormatter"/>s into model state errors.
@@ -221,19 +221,6 @@ namespace Microsoft.AspNetCore.Mvc
         {
             get => _inputFormatterExceptionModelStatePolicy.Value;
             set => _inputFormatterExceptionModelStatePolicy.Value = value;
-        }
-
-        /// <summary>
-        /// Gets or sets a flag to determine whether, if an action receives invalid JSON in
-        /// the request body, the JSON deserialization exception message should be replaced
-        /// by a generic error message in model state.
-        /// <see langword="false"/> by default, meaning that clients may receive details about
-        /// why the JSON they posted is considered invalid.
-        /// </summary>
-        public bool SuppressJsonDeserializationExceptionMessagesInModelState
-        {
-            get => _suppressJsonDeserializationExceptionMessagesInModelState.Value;
-            set => _suppressJsonDeserializationExceptionMessagesInModelState.Value = value;
         }
 
         IEnumerator<ICompatibilitySwitch> IEnumerable<ICompatibilitySwitch>.GetEnumerator()
