@@ -56,7 +56,6 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
 
             SetContentType(context, result);
             SetContentDispositionHeader(context, result);
-            Logger.FileResultExecuting(result.FileDownloadName);
 
             var request = context.HttpContext.Request;
             var httpRequestHeaders = request.GetTypedHeaders();
@@ -105,6 +104,10 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
                     {
                         return SetRangeHeaders(context, httpRequestHeaders, fileLength.Value);
                     }
+                }
+                else
+                {
+                    Logger.NotEnabledForRangeProcessing();
                 }
             }
 
@@ -300,7 +303,8 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
             var (isRangeRequest, range) = RangeHelper.ParseRange(
                 context.HttpContext,
                 httpRequestHeaders,
-                fileLength);
+                fileLength,
+                Logger);
 
             if (!isRangeRequest)
             {
