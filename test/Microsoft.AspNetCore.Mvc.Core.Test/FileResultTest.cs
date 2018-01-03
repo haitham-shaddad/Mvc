@@ -142,28 +142,6 @@ namespace Microsoft.AspNetCore.Mvc
             await Assert.ThrowsAsync<InvalidOperationException>(() => result.ExecuteResultAsync(actionContext));
         }
 
-        [ConditionalFact]
-        [FrameworkSkipCondition(RuntimeFrameworks.CLR, SkipReason = "Fails due to dotnet/standard#567")]
-        public async Task ExecuteResultAsync_LogsInformation_IfCanResolveLoggerFactory()
-        {
-            // Arrange
-            var httpContext = new DefaultHttpContext();
-            var services = new ServiceCollection();
-            var loggerSink = new TestSink();
-            services.AddSingleton<ILoggerFactory>(new TestLoggerFactory(loggerSink, true));
-            services.AddSingleton<EmptyFileResultExecutor>();
-            httpContext.RequestServices = services.BuildServiceProvider();
-
-            var actionContext = CreateActionContext(httpContext);
-            var result = new EmptyFileResult("application/my-type");
-
-            // Act
-            await result.ExecuteResultAsync(actionContext);
-
-            // Assert
-            Assert.Single(loggerSink.Writes);
-        }
-
         public static TheoryData<string, string> ContentDispositionData
         {
             get
@@ -302,11 +280,11 @@ namespace Microsoft.AspNetCore.Mvc
             httpRequestHeaders.IfUnmodifiedSince = lastModified;
             httpRequestHeaders.IfModifiedSince = DateTimeOffset.MinValue.AddDays(1);
             actionContext.HttpContext = httpContext;
+            var fileResult = (new Mock<FileResultExecutorBase>(NullLogger.Instance)).Object;
 
             // Act
-            var state = FileResultExecutorBase.GetPreconditionState(
+            var state = fileResult.GetPreconditionState(
                 httpRequestHeaders,
-                NullLogger.Instance,
                 lastModified,
                 etag);
 
@@ -339,11 +317,11 @@ namespace Microsoft.AspNetCore.Mvc
             httpRequestHeaders.IfUnmodifiedSince = DateTimeOffset.MinValue;
             httpRequestHeaders.IfModifiedSince = DateTimeOffset.MinValue.AddDays(2);
             actionContext.HttpContext = httpContext;
+            var fileResult = (new Mock<FileResultExecutorBase>(NullLogger.Instance)).Object;
 
             // Act
-            var state = FileResultExecutorBase.GetPreconditionState(
+            var state = fileResult.GetPreconditionState(
                 httpRequestHeaders,
-                NullLogger.Instance,
                 lastModified,
                 etag);
 
@@ -375,11 +353,11 @@ namespace Microsoft.AspNetCore.Mvc
             };
             httpRequestHeaders.IfModifiedSince = lastModified;
             actionContext.HttpContext = httpContext;
+            var fileResult = (new Mock<FileResultExecutorBase>(NullLogger.Instance)).Object;
 
             // Act
-            var state = FileResultExecutorBase.GetPreconditionState(
+            var state = fileResult.GetPreconditionState(
                 httpRequestHeaders,
-                NullLogger.Instance,
                 lastModified,
                 etag);
 
@@ -403,11 +381,11 @@ namespace Microsoft.AspNetCore.Mvc
             httpRequestHeaders.IfRange = new RangeConditionHeaderValue(ifRangeString);
             httpRequestHeaders.IfModifiedSince = lastModified;
             actionContext.HttpContext = httpContext;
+            var fileResult = (new Mock<FileResultExecutorBase>(NullLogger.Instance)).Object;
 
             // Act
-            var ifRangeIsValid = FileResultExecutorBase.IfRangeValid(
+            var ifRangeIsValid = fileResult.IfRangeValid(
                 httpRequestHeaders,
-                NullLogger.Instance,
                 lastModified,
                 etag);
 

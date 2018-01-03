@@ -59,7 +59,7 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
 
             var request = context.HttpContext.Request;
             var httpRequestHeaders = request.GetTypedHeaders();
-            var preconditionState = GetPreconditionState(httpRequestHeaders, Logger, lastModified, etag);
+            var preconditionState = GetPreconditionState(httpRequestHeaders, lastModified, etag);
 
             var response = context.HttpContext.Response;
             SetLastModifiedAndEtagHeaders(response, lastModified, etag);
@@ -100,7 +100,7 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
                     // range should be processed and Range headers should be set
                     if ((HttpMethods.IsHead(request.Method) || HttpMethods.IsGet(request.Method))
                         && (preconditionState == PreconditionState.Unspecified || preconditionState == PreconditionState.ShouldProcess)
-                        && (IfRangeValid(httpRequestHeaders, Logger, lastModified, etag)))
+                        && (IfRangeValid(httpRequestHeaders, lastModified, etag)))
                     {
                         return SetRangeHeaders(context, httpRequestHeaders, fileLength.Value);
                     }
@@ -153,9 +153,8 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
             response.Headers[HeaderNames.AcceptRanges] = AcceptRangeHeaderValue;
         }
 
-        internal static bool IfRangeValid(
+        internal bool IfRangeValid(
             RequestHeaders httpRequestHeaders,
-            ILogger logger,
             DateTimeOffset? lastModified = null,
             EntityTagHeaderValue etag = null)
         {
@@ -172,13 +171,13 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
                 {
                     if (lastModified.HasValue && lastModified > ifRange.LastModified)
                     {
-                        logger.IfRangeLastModifiedPreconditionFailed(lastModified, ifRange.LastModified);
+                        Logger.IfRangeLastModifiedPreconditionFailed(lastModified, ifRange.LastModified);
                         return false;
                     }
                 }
                 else if (etag != null && ifRange.EntityTag != null && !ifRange.EntityTag.Compare(etag, useStrongComparison: true))
                 {
-                    logger.IfRangeETagPreconditionFailed(etag, ifRange.EntityTag);
+                    Logger.IfRangeETagPreconditionFailed(etag, ifRange.EntityTag);
                     return false;
                 }
             }
@@ -187,9 +186,8 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
         }
 
         // Internal for testing
-        internal static PreconditionState GetPreconditionState(
+        internal PreconditionState GetPreconditionState(
             RequestHeaders httpRequestHeaders,
-            ILogger logger,
             DateTimeOffset? lastModified = null,
             EntityTagHeaderValue etag = null)
         {
@@ -210,7 +208,7 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
 
                 if (ifMatchState == PreconditionState.PreconditionFailed)
                 {
-                    logger.IfMatchPreconditionFailed(etag);
+                    Logger.IfMatchPreconditionFailed(etag);
                 }
             }
 
@@ -244,7 +242,7 @@ namespace Microsoft.AspNetCore.Mvc.Infrastructure
 
                 if (ifUnmodifiedSinceState == PreconditionState.PreconditionFailed)
                 {
-                    logger.IfUnmodifiedSincePreconditionFailed(lastModified, ifUnmodifiedSince);
+                    Logger.IfUnmodifiedSincePreconditionFailed(lastModified, ifUnmodifiedSince);
                 }
             }
 
