@@ -76,7 +76,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         /// <param name="objectPoolProvider">The <see cref="ObjectPoolProvider"/>.</param>
         /// <param name="suppressInputFormatterBuffering">Flag to buffer entire request body before deserializing it.</param>
         /// <param name="allowInputFormatterExceptionMessages">
-        /// If <see langword="true"/>, JSON deserialization exception messages will replaced by a generic message in model state.
+        /// If <see langword="false"/>, JSON deserialization exception messages will replaced by a generic message in model state.
         /// </param>
         [Obsolete("This constructor is obsolete and will be removed in a future version.")]
         public JsonPatchInputFormatter(

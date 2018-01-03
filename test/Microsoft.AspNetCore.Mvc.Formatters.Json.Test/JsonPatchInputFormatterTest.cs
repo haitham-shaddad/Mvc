@@ -306,7 +306,8 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
             var exceptionMessage = "Cannot deserialize the current JSON array (e.g. [1,2,3]) into type " +
                 $"'{typeof(Customer).FullName}' because the type requires a JSON object ";
 
-            var formatter = CreateFormatter();
+            // This test relies on 2.1 error message behavior
+            var formatter = CreateFormatter(allowInputFormatterExceptionMessages: true);
 
             var content = "[{\"op\": \"add\", \"path\" : \"Customer/Name\", \"value\":\"John\"}]";
             var contentBytes = Encoding.UTF8.GetBytes(content);
@@ -327,7 +328,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
             return NullLogger.Instance;
         }
 
-        private JsonPatchInputFormatter CreateFormatter()
+        private JsonPatchInputFormatter CreateFormatter(bool allowInputFormatterExceptionMessages = false)
         {
             return new JsonPatchInputFormatter(
                 NullLogger.Instance,
@@ -335,7 +336,10 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
                 ArrayPool<char>.Shared,
                 _objectPoolProvider,
                 new MvcOptions(),
-                new MvcJsonOptions());
+                new MvcJsonOptions()
+                {
+                    AllowInputFormatterExceptionMessages = allowInputFormatterExceptionMessages,
+                });
         }
 
         private InputFormatterContext CreateInputFormatterContext(Type modelType, HttpContext httpContext)

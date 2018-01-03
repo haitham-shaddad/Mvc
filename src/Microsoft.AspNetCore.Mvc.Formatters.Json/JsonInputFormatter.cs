@@ -413,17 +413,26 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
 
         private Exception WrapExceptionForModelState(Exception exception)
         {
+            // In 2.0 and earlier we always gave a generic error message for errors that come from JSON.NET
+            // We only allow it in 2.1 and newer if the app opts-in.
+            if (!(_jsonOptions?.AllowInputFormatterExceptionMessages ?? _allowInputFormatterExceptionMessages))
+            {
+                // This app is not opted-in to JSON.NET messages, return the original exception.
+                return exception;
+            }
+
             // It's not known that Json.NET currently ever raises error events with exceptions
             // other than these two types, but we're being conservative and limiting which ones
             // we regard as having safe messages to expose to clients
-            var isJsonExceptionType =
-                exception is JsonReaderException || exception is JsonSerializationException;
-            var suppressJsonDeserializationExceptionMessages = _jsonOptions?.AllowInputFormatterExceptionMessages ?? _allowInputFormatterExceptionMessages;
-            var suppressOriginalMessage =
-                suppressJsonDeserializationExceptionMessages || !isJsonExceptionType;
-            return suppressOriginalMessage
-                ? exception
-                : new InputFormatterException(exception.Message, exception);
+            if (exception is JsonReaderException || exception is JsonSerializationException)
+            {
+                // InputFormatterException specifies that the message is safe to return to a client, it will
+                // be added to model state.
+                return new InputFormatterException(exception.Message, exception);
+            }
+
+            // Not a known exception type, so we're not going to assume that it's safe.
+            return exception;
         }
     }
 }

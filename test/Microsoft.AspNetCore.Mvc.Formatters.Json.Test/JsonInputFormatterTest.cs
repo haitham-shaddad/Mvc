@@ -391,7 +391,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         public async Task ReadAsync_AddsModelValidationErrorsToModelState()
         {
             // Arrange
-            var formatter = CreateFormatter();
+            var formatter = CreateFormatter(allowInputFormatterExceptionMessages: true);
 
             var content = "{name: 'Person Name', Age: 'not-an-age'}";
             var contentBytes = Encoding.UTF8.GetBytes(content);
@@ -413,7 +413,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         public async Task ReadAsync_InvalidArray_AddsOverflowErrorsToModelState()
         {
             // Arrange
-            var formatter = CreateFormatter();
+            var formatter = CreateFormatter(allowInputFormatterExceptionMessages: true);
 
             var content = "[0, 23, 300]";
             var contentBytes = Encoding.UTF8.GetBytes(content);
@@ -434,7 +434,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         public async Task ReadAsync_InvalidComplexArray_AddsOverflowErrorsToModelState()
         {
             // Arrange
-            var formatter = CreateFormatter();
+            var formatter = CreateFormatter(allowInputFormatterExceptionMessages: true);
 
             var content = "[{name: 'Name One', Age: 30}, {name: 'Name Two', Small: 300}]";
             var contentBytes = Encoding.UTF8.GetBytes(content);
@@ -527,7 +527,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
             // Arrange
             // by default we ignore missing members, so here explicitly changing it
             var serializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error };
-            var formatter = CreateFormatter(serializerSettings);
+            var formatter = CreateFormatter(serializerSettings, allowInputFormatterExceptionMessages: true);
 
             // missing password property here
             var contentBytes = Encoding.UTF8.GetBytes("{ \"UserName\" : \"John\"}");
@@ -573,13 +573,13 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
         [InlineData("{\"age\":\"x\"}", "age", "Could not convert string to decimal: x. Path 'age', line 1, position 10.")]
         [InlineData("{\"login\":1}", "login", "Error converting value 1 to type 'Microsoft.AspNetCore.Mvc.Formatters.JsonInputFormatterTest+UserLogin'. Path 'login', line 1, position 10.")]
         [InlineData("{\"login\":{\"username\":\"somevalue\"}}", "login", "Required property 'Password' not found in JSON. Path 'login', line 1, position 33.")]
-        public async Task ReadAsync_RegistersJsonInputExceptionsAsInputFormatterException(
+        public async Task ReadAsync_WithAllowInputFormatterExceptionMessages_RegistersJsonInputExceptionsAsInputFormatterException(
             string content,
             string modelStateKey,
             string expectedMessage)
         {
             // Arrange
-            var formatter = CreateFormatter();
+            var formatter = CreateFormatter(allowInputFormatterExceptionMessages: true);
 
             var contentBytes = Encoding.UTF8.GetBytes(content);
             var httpContext = GetHttpContext(contentBytes);
@@ -596,6 +596,36 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
 
             var modelError = formatterContext.ModelState[modelStateKey].Errors.Single();
             Assert.Equal(expectedMessage, modelError.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task ReadAsync_DefaultOptions_DoesNotWrapJsonInputExceptions()
+        {
+            // Arrange
+            var formatter = new JsonInputFormatter(
+                GetLogger(),
+                _serializerSettings,
+                ArrayPool<char>.Shared,
+                _objectPoolProvider,
+                new MvcOptions(),
+                new MvcJsonOptions());
+
+            var contentBytes = Encoding.UTF8.GetBytes("{");
+            var httpContext = GetHttpContext(contentBytes);
+
+            var formatterContext = CreateInputFormatterContext(typeof(User), httpContext);
+
+            // Act
+            var result = await formatter.ReadAsync(formatterContext);
+
+            // Assert
+            Assert.True(result.HasError);
+            Assert.True(!formatterContext.ModelState.IsValid);
+            Assert.True(formatterContext.ModelState.ContainsKey(string.Empty));
+
+            var modelError = formatterContext.ModelState[string.Empty].Errors.Single();
+            Assert.IsNotType<InputFormatterException>(modelError.Exception);
+            Assert.Empty(modelError.ErrorMessage);
         }
 
         [Fact]
@@ -627,8 +657,8 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
             Assert.True(formatterContext.ModelState.ContainsKey(string.Empty));
 
             var modelError = formatterContext.ModelState[string.Empty].Errors.Single();
-            Assert.IsNotType<InputFormatterException>(modelError.Exception);
-            Assert.Empty(modelError.ErrorMessage);
+            Assert.Null(modelError.Exception);
+            Assert.NotEmpty(modelError.ErrorMessage);
         }
 
         private class TestableJsonInputFormatter : JsonInputFormatter
@@ -648,7 +678,7 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
             return NullLogger.Instance;
         }
 
-        private JsonInputFormatter CreateFormatter(JsonSerializerSettings serializerSettings = null)
+        private JsonInputFormatter CreateFormatter(JsonSerializerSettings serializerSettings = null, bool allowInputFormatterExceptionMessages = false)
         {
             return new JsonInputFormatter(
                 GetLogger(),
@@ -656,7 +686,10 @@ namespace Microsoft.AspNetCore.Mvc.Formatters
                 ArrayPool<char>.Shared,
                 _objectPoolProvider,
                 new MvcOptions(),
-                new MvcJsonOptions());
+                new MvcJsonOptions()
+                {
+                    AllowInputFormatterExceptionMessages = allowInputFormatterExceptionMessages,
+                });
         }
 
         private static HttpContext GetHttpContext(
